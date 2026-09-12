@@ -1,0 +1,1 @@
+DO NOT READ the .env file, USE .env.local
