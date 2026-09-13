@@ -1,0 +1,31 @@
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { logEntries } from "@/lib/db/schema";
+import { desc } from "drizzle-orm";
+import { getTokenFromRequest, verifyToken } from "@/lib/auth";
+
+export async function GET(request: NextRequest) {
+  try {
+    const token = getTokenFromRequest(request);
+    if (!token) {
+      return NextResponse.json({ error: "You need to log in to access this." }, { status: 401 });
+    }
+
+    const user = verifyToken(token);
+    if (!["ADMIN", "SECRETARY", "CHAIRMAN"].includes(user.role)) {
+      return NextResponse.json({ error: "You don't have permission to do this." }, { status: 403 });
+    }
+
+    const logs = await db.query.logEntries.findMany({
+      orderBy: [desc(logEntries.timestamp)],
+      limit: 100,
+    });
+
+    return NextResponse.json(logs);
+  } catch (error) {
+    return NextResponse.json(
+      { error: "Couldn't load activity logs. Please try again." },
+      { status: 500 }
+    );
+  }
+}
