@@ -43,7 +43,7 @@ export default function EdoMap({ onLGASelect }: EdoMapProps) {
   }
 
   const zones = {
-    "Northern Zone": {
+    "Edo North": {
       lgas: lgaData.filter(lga => ["akoko-edo", "etsako-east", "etsako-central", "etsako-west", "owan-east", "owan-west"].includes(lga.id)),
       color: "emerald",
       gradient: "from-emerald-500/20 to-emerald-600/5",
@@ -53,7 +53,7 @@ export default function EdoMap({ onLGASelect }: EdoMapProps) {
       iconColor: "text-emerald-500",
       badge: "bg-emerald-500"
     },
-    "Central Zone": {
+    "Edo Central": {
       lgas: lgaData.filter(lga => ["esan-central", "esan-north-east", "esan-south-east", "esan-west", "igueben"].includes(lga.id)),
       color: "blue",
       gradient: "from-blue-500/20 to-blue-600/5",
@@ -63,7 +63,7 @@ export default function EdoMap({ onLGASelect }: EdoMapProps) {
       iconColor: "text-blue-500",
       badge: "bg-blue-500"
     },
-    "Southern Zone": {
+    "Edo South": {
       lgas: lgaData.filter(lga => ["egor", "ikpoba-okha", "oredo", "orhionmwon", "ovia-north-east", "ovia-south-west", "uhunmwonde"].includes(lga.id)),
       color: "amber",
       gradient: "from-amber-500/20 to-amber-600/5",
