@@ -6,8 +6,17 @@ import { getTokenFromRequest, verifyToken } from "@/lib/auth";
 import { disciplinaryCaseSchema } from "@/lib/validations";
 import { logError } from "@/lib/error-logger";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const token = getTokenFromRequest(request);
+    if (!token) {
+      return NextResponse.json({ error: "You need to log in to access this." }, { status: 401 });
+    }
+    const user = verifyToken(token);
+    if (!user) {
+      return NextResponse.json({ error: "You need to log in to access this." }, { status: 401 });
+    }
+
     const cases = await db.query.disciplinaryCases.findMany({
       with: {
         staff: {
@@ -40,7 +49,7 @@ export async function POST(request: NextRequest) {
     }
 
     const user = verifyToken(token);
-    if (!["ADMIN", "SECRETARY", "CHAIRMAN"].includes(user.role)) {
+    if (!["ADMIN", "SECRETARY", "CHAIRMAN"].includes(user!.role)) {
       return NextResponse.json({ error: "You don't have permission to do this." }, { status: 403 });
     }
 
@@ -70,6 +79,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(newCase, { status: 201 });
   } catch (error) {
+    const token = getTokenFromRequest(request);
+    const user = token ? verifyToken(token) : null;
     await logError({
       source: "api/disciplinary",
       message: error instanceof Error ? error.message : "Unknown error",

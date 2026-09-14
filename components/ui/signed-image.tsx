@@ -3,8 +3,8 @@
 import { useState, useEffect, ImgHTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 
-interface SignedImageProps extends ImgHTMLAttributes<HTMLImageElement> {
-  src: string | null | undefined;
+interface SignedImageProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'src'> {
+  src?: string | null;
 }
 
 export function SignedImage({ src, className, ...props }: SignedImageProps) {

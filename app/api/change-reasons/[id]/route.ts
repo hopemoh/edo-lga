@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { changeReasons } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { getTokenFromRequest, verifyToken } from "@/lib/auth";
+import { changeReasonSchema } from "@/lib/validations";
 import { logError } from "@/lib/error-logger";
 
 export async function PATCH(
@@ -17,12 +18,18 @@ export async function PATCH(
     }
 
     const user = verifyToken(token);
-    if (user.role !== "ADMIN") {
+    if (user!.role !== "ADMIN") {
       return NextResponse.json({ error: "You don't have permission to do this." }, { status: 403 });
     }
 
     const body = await request.json();
-    const { isActive } = body;
+
+    const parsed = changeReasonSchema.partial().safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    }
+
+    const { isActive } = parsed.data as { isActive: boolean };
 
     await db
       .update(changeReasons)
@@ -35,6 +42,8 @@ export async function PATCH(
 
     return NextResponse.json(updated);
   } catch (error) {
+    const token = getTokenFromRequest(request);
+    const user = token ? verifyToken(token) : null;
     await logError({
       source: "api/change-reasons/[id]",
       message: error instanceof Error ? error.message : "Unknown error",

@@ -105,9 +105,9 @@ export default function DataChangeHistoryModal({ open, onClose, staff }: DataCha
                                                     try {
                                                         const res = await fetch(`/api/signed-url?url=${encodeURIComponent(req.supportingDocumentUrl)}`);
                                                         const data = await res.json();
-                                                        window.open(data.signedUrl || req.supportingDocumentUrl, "_blank");
+                                                        window.open(data.signedUrl || req.supportingDocumentUrl, "_blank", "noopener,noreferrer");
                                                     } catch {
-                                                        window.open(req.supportingDocumentUrl, "_blank");
+                                                        window.open(req.supportingDocumentUrl, "_blank", "noopener,noreferrer");
                                                     }
                                                 }}
                                                 className="h-8 gap-2 text-blue-600 border-blue-200 hover:bg-blue-50"

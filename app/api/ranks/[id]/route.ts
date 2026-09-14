@@ -16,7 +16,7 @@ export async function DELETE(
     }
 
     const user = verifyToken(token);
-    if (!["ADMIN", "SECRETARY", "CHAIRMAN"].includes(user.role)) {
+    if (!["ADMIN", "SECRETARY", "CHAIRMAN"].includes(user!.role)) {
       return NextResponse.json({ error: "You don't have permission to do this." }, { status: 403 });
     }
 
@@ -48,6 +48,8 @@ export async function DELETE(
 
     return NextResponse.json({ message: "Rank deleted" });
   } catch (error) {
+    const token = getTokenFromRequest(request);
+    const user = token ? verifyToken(token) : null;
     await logError({
       source: "api/ranks/[id]",
       message: error instanceof Error ? error.message : "Unknown error",

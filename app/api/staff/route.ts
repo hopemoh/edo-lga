@@ -77,6 +77,8 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(transformed);
   } catch (error) {
+    const token = getTokenFromRequest(request);
+    const user = token ? verifyToken(token) : null;
     await logError({
       source: "api/staff",
       message: error instanceof Error ? error.message : "Unknown error",
@@ -131,6 +133,10 @@ export async function POST(request: NextRequest) {
       body = await request.json();
     }
 
+    if (documentFile && documentFile.size > 10 * 1024 * 1024) {
+      return NextResponse.json({ error: "File size must be less than 10MB" }, { status: 400 });
+    }
+
     const parsed = staffCreateSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
@@ -138,11 +144,9 @@ export async function POST(request: NextRequest) {
 
     const {
       lgaId,
-      serialNumber,
       name,
       sex,
       statusId,
-      role: staffRole = "STAFF",
       sgl = 0,
       dateOfBirth,
       dateOfFirstAppt,
@@ -151,10 +155,13 @@ export async function POST(request: NextRequest) {
       phoneNumber,
       recommendedRetirementDate,
       remark,
-      yearsExperience,
-      rankId,
-      qualificationIds = [],
     } = parsed.data;
+
+    const serialNumber = body.serialNumber;
+    const staffRole = body.role ?? "STAFF";
+    const yearsExperience = body.yearsExperience;
+    const rankId = body.rankId;
+    const qualificationIds = body.qualificationIds ?? [];
 
     let documentUrl: string | null = null;
     if (documentFile) {
@@ -174,7 +181,7 @@ export async function POST(request: NextRequest) {
         name,
         sex,
         statusId,
-        role: staffRole,
+        role: staffRole as "STAFF" | "ADMIN" | "SECRETARY" | "CHAIRMAN",
         sgl,
         dateOfBirth: new Date(dateOfBirth),
         dateOfFirstAppt: new Date(dateOfFirstAppt),
@@ -223,11 +230,13 @@ export async function POST(request: NextRequest) {
       userId: user.id,
       userFullName: user.name,
       userRank: "",
-      userRole: user.role,
+      userRole: (user.role ?? "STAFF") as "STAFF" | "ADMIN" | "SECRETARY" | "CHAIRMAN",
     });
 
     return NextResponse.json(newStaff, { status: 201 });
   } catch (error) {
+    const token = getTokenFromRequest(request);
+    const user = token ? verifyToken(token) : null;
     await logError({
       source: "api/staff",
       message: error instanceof Error ? error.message : "Unknown error",

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -40,6 +40,9 @@ export default function ErrorLogsPage() {
   const [page, setPage] = useState(0)
   const limit = 50
 
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkLoading, setBulkLoading] = useState(false)
+
   useEffect(() => {
     initAuthFromStorage()
   }, [])
@@ -57,6 +60,10 @@ export default function ErrorLogsPage() {
     }
     fetchLogs()
   }, [user, levelFilter, sourceFilter, resolvedFilter, page, router])
+
+  useEffect(() => {
+    setSelectedIds(new Set())
+  }, [levelFilter, sourceFilter, resolvedFilter, page])
 
   const fetchLogs = async () => {
     setLoading(true)
@@ -100,6 +107,62 @@ export default function ErrorLogsPage() {
     } catch {
       toast.error("Couldn't save your changes. Please try again.")
     }
+  }
+
+  const bulkResolve = async (ids: string[]) => {
+    if (ids.length === 0) return
+    setBulkLoading(true)
+    try {
+      const token = localStorage.getItem("token")
+      const res = await fetch("/api/error-logs", {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ ids }),
+      })
+      if (res.ok) {
+        toast.success(`${ids.length} error log${ids.length > 1 ? "s" : ""} marked as resolved`)
+        setSelectedIds(new Set())
+        fetchLogs()
+      } else {
+        const data = await res.json()
+        toast.error(data.error || "Couldn't save your changes. Please try again.")
+      }
+    } catch {
+      toast.error("Couldn't save your changes. Please try again.")
+    } finally {
+      setBulkLoading(false)
+    }
+  }
+
+  const unresolvedOnPage = logs.filter((l) => !l.resolved)
+  const allSelected = unresolvedOnPage.length > 0 && unresolvedOnPage.every((l) => selectedIds.has(l.id))
+  const someSelected = selectedIds.size > 0
+
+  const toggleSelectAll = useCallback(() => {
+    if (allSelected) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(unresolvedOnPage.map((l) => l.id)))
+    }
+  }, [allSelected, unresolvedOnPage])
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }
+
+  const handleBulkResolve = () => {
+    bulkResolve(Array.from(selectedIds))
   }
 
   if (!user) {
@@ -201,6 +264,28 @@ export default function ErrorLogsPage() {
           </Button>
         </div>
 
+        {someSelected && (
+          <div className="flex items-center gap-3 mb-4 p-3 bg-primary/5 border border-primary/20 rounded-lg">
+            <span className="text-sm font-medium">{selectedIds.size} selected</span>
+            <Button
+              size="sm"
+              onClick={handleBulkResolve}
+              disabled={bulkLoading}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              <CheckCircle className="w-4 h-4 mr-1" />
+              {bulkLoading ? "Resolving..." : `Mark Resolved (${selectedIds.size})`}
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setSelectedIds(new Set())}
+            >
+              Clear Selection
+            </Button>
+          </div>
+        )}
+
         {loading ? (
           <Card className="p-8 text-center">
             <p className="text-muted-foreground">Loading error logs...</p>
@@ -218,6 +303,14 @@ export default function ErrorLogsPage() {
                 <table className="w-full text-sm">
                   <thead className="bg-muted/50 border-b border-border/50">
                     <tr>
+                      <th className="px-4 py-3 w-10">
+                        <input
+                          type="checkbox"
+                          checked={allSelected}
+                          onChange={toggleSelectAll}
+                          className="h-4 w-4 rounded border-gray-300 accent-primary cursor-pointer"
+                        />
+                      </th>
                       <th className="px-4 py-3 text-left font-medium">Level</th>
                       <th className="px-4 py-3 text-left font-medium">Timestamp</th>
                       <th className="px-4 py-3 text-left font-medium">Source</th>
@@ -230,7 +323,22 @@ export default function ErrorLogsPage() {
                   </thead>
                   <tbody>
                     {logs.map((log) => (
-                      <tr key={log.id} className="border-b border-border/30 hover:bg-secondary/5">
+                      <tr
+                        key={log.id}
+                        className={`border-b border-border/30 hover:bg-secondary/5 ${
+                          selectedIds.has(log.id) ? "bg-primary/5" : ""
+                        }`}
+                      >
+                        <td className="px-4 py-3">
+                          {!log.resolved && (
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.has(log.id)}
+                              onChange={() => toggleSelect(log.id)}
+                              className="h-4 w-4 rounded border-gray-300 accent-primary cursor-pointer"
+                            />
+                          )}
+                        </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
                             {getLevelIcon(log.level)}

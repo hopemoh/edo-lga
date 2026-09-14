@@ -1,3 +1,4 @@
+import DOMPurify from "isomorphic-dompurify"
 import { cn } from "@/lib/utils"
 
 interface RichTextDisplayProps {
@@ -15,7 +16,13 @@ export default function RichTextDisplay({
 }: RichTextDisplayProps) {
     if (!content) return null
 
-    // Basic styles for rich text content
+    const sanitized = DOMPurify.sanitize(content, {
+        ALLOWED_TAGS: ["p", "br", "strong", "em", "u", "s", "a", "h1", "h2", "h3", "h4", "h5", "h6",
+            "ul", "ol", "li", "blockquote", "pre", "code", "img", "table", "thead", "tbody",
+            "tr", "th", "td", "div", "span", "hr"],
+        ALLOWED_ATTR: ["href", "src", "alt", "className", "title", "target", "rel"],
+    })
+
     const styles = `
     prose dark:prose-invert max-w-none break-words [&_*]:max-w-full
     prose-p:leading-relaxed prose-p:mb-4 last:prose-p:mb-0
@@ -39,8 +46,7 @@ export default function RichTextDisplay({
         <div
             className={cn(styles, className)}
             style={truncateStyles}
-            dangerouslySetInnerHTML={{ __html: content }}
-            
+            dangerouslySetInnerHTML={{ __html: sanitized }}
         />
     )
 }

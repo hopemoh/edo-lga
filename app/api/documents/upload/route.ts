@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
     }
 
     const user = verifyToken(token);
-    if (!["ADMIN", "SECRETARY", "CHAIRMAN"].includes(user.role)) {
+    if (!["ADMIN", "SECRETARY", "CHAIRMAN"].includes(user!.role)) {
       return NextResponse.json(
         { error: "You don't have permission to do this." },
         { status: 403 }
@@ -32,6 +32,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (file.size > 10 * 1024 * 1024) {
+      return NextResponse.json({ error: "File size must be less than 10MB" }, { status: 400 });
+    }
+
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
@@ -40,6 +44,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ url }, { status: 201 });
   } catch (error) {
+    const token = getTokenFromRequest(request);
+    const user = token ? verifyToken(token) : null;
     await logError({
       source: "api/documents/upload",
       message: error instanceof Error ? error.message : "Unknown error",

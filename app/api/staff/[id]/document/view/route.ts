@@ -74,6 +74,8 @@ export async function GET(
 
     return NextResponse.json({ url: presignedUrl });
   } catch (error) {
+    const token = getTokenFromRequest(request);
+    const user = token ? verifyToken(token) : null;
     await logError({
       source: "api/staff/[id]/document/view",
       message: error instanceof Error ? error.message : "Unknown error",

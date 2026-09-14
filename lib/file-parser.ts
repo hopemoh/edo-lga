@@ -167,3 +167,54 @@ function extractValue(line: string, key: string): string {
   if (index === -1) return "";
   return line.substring(index + key.length).trim();
 }
+
+export interface BulkUpdateRow {
+  name: string;
+  sex?: string;
+  status?: string;
+  rank?: string;
+  sgl?: number;
+  phoneNumber?: string;
+  remark?: string;
+  qualification?: string;
+}
+
+export async function parseBulkUpdateExcel(file: File): Promise<BulkUpdateRow[]> {
+  const buffer = await file.arrayBuffer();
+  const workbook = XLSX.read(buffer);
+  const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+  const data = XLSX.utils.sheet_to_json(worksheet);
+
+  return data
+    .filter((row: any) => row.Name || row.name || row.__EMPTY_1)
+    .map((row: any) => {
+      const row_lower: Record<string, any> = {};
+      for (const key of Object.keys(row)) {
+        row_lower[key.toLowerCase().trim()] = row[key];
+      }
+
+      const get = (...keys: string[]) => {
+        for (const k of keys) {
+          const val = row[k] ?? row_lower[k] ?? row_lower[k.toLowerCase()];
+          if (val !== undefined && val !== null && val !== "") return val;
+        }
+        return undefined;
+      };
+
+      return {
+        name: (get("name") || "").toString().trim(),
+        sex: get("sex") ? get("sex").toString().trim().toUpperCase() : undefined,
+        status: get("status") ? get("status").toString().trim() : undefined,
+        rank: get("rank") ? get("rank").toString().trim() : undefined,
+        sgl: get("sgl") ? parseInt(get("sgl").toString()) : undefined,
+        phoneNumber: get("phone number", "phone", "phonenumber", "phone_no")
+          ? get("phone number", "phone", "phonenumber", "phone_no").toString().trim()
+          : undefined,
+        remark: get("remark") ? get("remark").toString().trim() : undefined,
+        qualification: get("qualification", "qualifications")
+          ? get("qualification", "qualifications").toString().trim()
+          : undefined,
+      };
+    })
+    .filter((row: BulkUpdateRow) => row.name.length > 0);
+}

@@ -12,6 +12,7 @@ import ActivityLog from "./activity-log"
 import ApprovalLogsList from "./approval-logs-list"
 import DisciplineList from "./discipline-list"
 import FileUploadModal from "./file-upload-modal"
+import BulkUpdateModal from "./bulk-update-modal"
 import StaffFormModal from "../admin/staff-form-modal"
 import StatusRankFormModal from "../admin/status-rank-form-modal"
 import LGAFormModal from "../admin/lga-form-modal"
@@ -37,6 +38,7 @@ export default function StaffDashboard() {
   const [currentPage, setCurrentPage] = useState(1)
   const [view, setView] = useState<"staff" | "logs" | "requests" | "approvals" | "discipline">("staff")
   const [showFileUpload, setShowFileUpload] = useState(false)
+  const [showBulkUpdate, setShowBulkUpdate] = useState(false)
   const [showStaffForm, setShowStaffForm] = useState(false)
   const [showStatusForm, setShowStatusForm] = useState(false)
   const [showLGAForm, setShowLGAForm] = useState(false)
@@ -47,7 +49,7 @@ export default function StaffDashboard() {
   const [staffToEdit, setStaffToEdit] = useState<Staff | null>(null)
   const [isEditing, setIsEditing] = useState(false)
 
-  const staffLgaId = isAdmin ? (selectedLGA?.id || undefined) : (currentUser?.lgaId || undefined)
+  const staffLgaId = isAdmin() ? (selectedLGA?.id || undefined) : (currentUser?.lgaId || undefined)
 
   const staffQuery = useStaff(staffLgaId)
   const changeRequestsQuery = useChangeRequests()
@@ -121,7 +123,7 @@ export default function StaffDashboard() {
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-linear-to-br from-gray-50 via-white to-emerald-50/30">
-        <StaffSidebar selectedLGA={selectedLGA} onSelect={handleLGASelect} isAdmin={isAdmin} />
+        <StaffSidebar selectedLGA={selectedLGA} onSelect={handleLGASelect} isAdmin={isAdmin()} />
 
         <SidebarInset className="flex flex-col">
           {/* Header */}
@@ -220,6 +222,14 @@ export default function StaffDashboard() {
                     <Upload className="w-4 h-4 mr-2" />
                     Bulk Import
                   </Button>
+                  {/* <Button
+                    variant="outline"
+                    onClick={() => setShowBulkUpdate(true)}
+                    disabled={!selectedLGA}
+                  >
+                    <Upload className="w-4 h-4 mr-2" />
+                    Bulk Update
+                  </Button> */}
                   {selectedLGA && (
                     <Button
                       variant="outline"
@@ -405,8 +415,15 @@ export default function StaffDashboard() {
           onImport={() => staffQuery.refetch()}
           lgaId={selectedLGA.id}
         />
-      )
-      }
+      )}
+
+      {selectedLGA && (
+        <BulkUpdateModal
+          open={showBulkUpdate}
+          onClose={() => setShowBulkUpdate(false)}
+          lgaId={selectedLGA.id}
+        />
+      )}
 
       <StaffFormModal
         open={showStaffForm}
@@ -415,7 +432,7 @@ export default function StaffDashboard() {
         lgaId={selectedLGA?.id}
         isEditing={isEditing}
         staffToEdit={staffToEdit}
-        currentUserRole={currentUser?.role}
+        currentUserRole={currentUser?.role as "STAFF" | "ADMIN" | "SECRETARY" | "CHAIRMAN"}
       />
 
       <LGAFormModal

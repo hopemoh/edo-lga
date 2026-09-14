@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
     }
 
     const user = verifyToken(token);
-    if (!["ADMIN", "SECRETARY", "CHAIRMAN"].includes(user.role)) {
+    if (!["ADMIN", "SECRETARY", "CHAIRMAN"].includes(user!.role)) {
       return NextResponse.json({ error: "You don't have permission to do this." }, { status: 403 });
     }
 
@@ -73,6 +73,10 @@ export async function POST(request: NextRequest) {
         { error: "Type, title, and subtitle are required" },
         { status: 400 }
       );
+    }
+
+    if (imageFile && imageFile.size > 5 * 1024 * 1024) {
+      return NextResponse.json({ error: "Image size must be less than 5MB" }, { status: 400 });
     }
 
     let imageUrl: string | null = null;
@@ -99,6 +103,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(newHighlight, { status: 201 });
   } catch (error) {
+    const token = getTokenFromRequest(request);
+    const user = token ? verifyToken(token) : null;
     await logError({
       source: "api/highlights",
       message: error instanceof Error ? error.message : "Unknown error",

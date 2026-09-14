@@ -26,7 +26,7 @@ export async function PUT(
     }
 
     const user = verifyToken(token);
-    if (!["ADMIN", "SECRETARY", "CHAIRMAN"].includes(user.role)) {
+    if (!["ADMIN", "SECRETARY", "CHAIRMAN"].includes(user!.role)) {
       return NextResponse.json({ error: "You don't have permission to do this." }, { status: 403 });
     }
 
@@ -48,6 +48,14 @@ export async function PUT(
     const role = formData.get("role") as string;
     const order = formData.get("order") as string;
     const imageFile = formData.get("image") as File | null;
+
+    if (!name || !role) {
+      return NextResponse.json({ error: "Name and role are required" }, { status: 400 });
+    }
+
+    if (imageFile && imageFile.size > 5 * 1024 * 1024) {
+      return NextResponse.json({ error: "Image size must be less than 5MB" }, { status: 400 });
+    }
 
     let imageUrl = executive.image;
 
@@ -89,6 +97,8 @@ export async function PUT(
 
     return NextResponse.json(updated);
   } catch (error) {
+    const token = getTokenFromRequest(request);
+    const user = token ? verifyToken(token) : null;
     await logError({
       source: "api/executives/[id]",
       message: error instanceof Error ? error.message : "Unknown error",
@@ -115,7 +125,7 @@ export async function DELETE(
     }
 
     const user = verifyToken(token);
-    if (!["ADMIN", "SECRETARY", "CHAIRMAN"].includes(user.role)) {
+    if (!["ADMIN", "SECRETARY", "CHAIRMAN"].includes(user!.role)) {
       return NextResponse.json({ error: "You don't have permission to do this." }, { status: 403 });
     }
 
@@ -141,6 +151,8 @@ export async function DELETE(
 
     return NextResponse.json({ message: "Executive deleted" });
   } catch (error) {
+    const token = getTokenFromRequest(request);
+    const user = token ? verifyToken(token) : null;
     await logError({
       source: "api/executives/[id]",
       message: error instanceof Error ? error.message : "Unknown error",

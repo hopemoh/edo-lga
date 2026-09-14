@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { disciplinaryCases } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { getTokenFromRequest, verifyToken } from "@/lib/auth";
+import { disciplinaryCaseSchema } from "@/lib/validations";
 import { logError } from "@/lib/error-logger";
 
 export async function PUT(
@@ -17,12 +18,18 @@ export async function PUT(
     }
 
     const user = verifyToken(token);
-    if (!["ADMIN", "SECRETARY", "CHAIRMAN"].includes(user.role)) {
+    if (!["ADMIN", "SECRETARY", "CHAIRMAN"].includes(user!.role)) {
       return NextResponse.json({ error: "You don't have permission to do this." }, { status: 403 });
     }
 
     const body = await request.json();
-    const { title, description, status, sanction, dateResolved } = body;
+
+    const parsed = disciplinaryCaseSchema.partial().safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    }
+
+    const { title, description, status, sanction, dateResolved } = parsed.data;
 
     await db
       .update(disciplinaryCases)
@@ -42,6 +49,8 @@ export async function PUT(
 
     return NextResponse.json(updated);
   } catch (error) {
+    const token = getTokenFromRequest(request);
+    const user = token ? verifyToken(token) : null;
     await logError({
       source: "api/disciplinary/[id]",
       message: error instanceof Error ? error.message : "Unknown error",
@@ -69,13 +78,15 @@ export async function DELETE(
     }
 
     const user = verifyToken(token);
-    if (!["ADMIN", "CHAIRMAN"].includes(user.role)) {
+    if (!["ADMIN", "CHAIRMAN"].includes(user!.role)) {
       return NextResponse.json({ error: "You don't have permission to do this." }, { status: 403 });
     }
 
     await db.delete(disciplinaryCases).where(eq(disciplinaryCases.id, id));
     return NextResponse.json({ success: true });
   } catch (error) {
+    const token = getTokenFromRequest(request);
+    const user = token ? verifyToken(token) : null;
     await logError({
       source: "api/disciplinary/[id]",
       message: error instanceof Error ? error.message : "Unknown error",

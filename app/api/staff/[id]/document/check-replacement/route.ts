@@ -69,6 +69,8 @@ export async function GET(
       message: "Document can be replaced",
     });
   } catch (error) {
+    const token = getTokenFromRequest(request);
+    const user = token ? verifyToken(token) : null;
     await logError({
       source: "api/staff/[id]/document/check-replacement",
       message: error instanceof Error ? error.message : "Unknown error",

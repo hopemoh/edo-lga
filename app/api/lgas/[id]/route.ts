@@ -11,6 +11,7 @@ import {
   generateS3Key,
 } from "@/lib/s3";
 import { safeParseJson } from "@/lib/utils";
+import { lgaSchema } from "@/lib/validations";
 import { logError } from "@/lib/error-logger";
 
 export async function GET(
@@ -62,7 +63,7 @@ export async function PUT(
     }
 
     const user = verifyToken(token);
-    if (!["ADMIN", "SECRETARY", "CHAIRMAN"].includes(user.role)) {
+    if (!["ADMIN", "SECRETARY", "CHAIRMAN"].includes(user!.role)) {
       return NextResponse.json({ error: "You don't have permission to do this." }, { status: 403 });
     }
 
@@ -86,6 +87,11 @@ export async function PUT(
     const mapX = formData.get("mapX") as string;
     const mapY = formData.get("mapY") as string;
     const imageFile = formData.get("image") as File | null;
+
+    const parsed = lgaSchema.safeParse({ name: name || lga.name, zone: zone || lga.zone });
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    }
 
     if (name) await db.update(lgas).set({ name, zone: zone || lga.zone }).where(eq(lgas.id, id));
 
@@ -133,6 +139,8 @@ export async function PUT(
 
     return NextResponse.json(updatedLga);
   } catch (error) {
+    const token = getTokenFromRequest(request);
+    const user = token ? verifyToken(token) : null;
     await logError({
       source: "api/lgas/[id]",
       message: error instanceof Error ? error.message : "Unknown error",

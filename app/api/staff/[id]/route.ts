@@ -68,6 +68,8 @@ export async function GET(
 
     return NextResponse.json(transformed);
   } catch (error) {
+    const token = getTokenFromRequest(request);
+    const user = token ? verifyToken(token) : null;
     await logError({
       source: "api/staff/[id]",
       message: error instanceof Error ? error.message : "Unknown error",
@@ -112,7 +114,6 @@ export async function PUT(
       name,
       sex,
       statusId,
-      role: staffRole,
       sgl,
       dateOfBirth,
       dateOfFirstAppt,
@@ -121,12 +122,14 @@ export async function PUT(
       phoneNumber,
       recommendedRetirementDate,
       remark,
-      yearsExperience,
-      rankId,
-      qualificationIds,
-      certificationIds,
-      changeRequestId,
     } = parsed.data;
+
+    const staffRole = body.role;
+    const yearsExperience = body.yearsExperience;
+    const rankId = body.rankId;
+    const qualificationIds = body.qualificationIds;
+    const certificationIds = body.certificationIds;
+    const changeRequestId = body.changeRequestId;
 
     const existingStaff = await db.query.staff.findFirst({
       where: eq(staff.id, id),
@@ -222,12 +225,14 @@ export async function PUT(
         details: `Updated fields: ${Object.keys(changes).join(", ")}`,
         performedBy: user.id,
         performedByFullName: user.name,
-        performedByRole: user.role,
+        performedByRole: (user.role ?? "STAFF") as "STAFF" | "ADMIN" | "SECRETARY" | "CHAIRMAN",
       });
     }
 
     return NextResponse.json(updatedStaff);
   } catch (error) {
+    const token = getTokenFromRequest(request);
+    const user = token ? verifyToken(token) : null;
     await logError({
       source: "api/staff/[id]",
       message: error instanceof Error ? error.message : "Unknown error",

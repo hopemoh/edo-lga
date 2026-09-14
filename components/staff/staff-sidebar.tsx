@@ -37,7 +37,7 @@ export default function StaffSidebar({ selectedLGA, onSelect, isAdmin = false }:
     }
   }, [])
 
-  const lgas = lgasQuery.data ?? []
+  const lgas = (lgasQuery.data ?? []) as LGA[]
   const loading = lgasQuery.isLoading
 
   const filteredLGAs = lgas.filter(

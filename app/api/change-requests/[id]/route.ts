@@ -39,6 +39,8 @@ export async function GET(
 
     return NextResponse.json(changeRequest);
   } catch (error) {
+    const token = getTokenFromRequest(request);
+    const user = token ? verifyToken(token) : null;
     await logError({
       source: "api/change-requests/[id]",
       message: error instanceof Error ? error.message : "Unknown error",

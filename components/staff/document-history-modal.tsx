@@ -69,7 +69,7 @@ export default function DocumentHistoryModal({ open, onClose, staff }: DocumentH
             })
             if (response.ok) {
                 const data = await response.json()
-                window.open(data.url, "_blank")
+                window.open(data.url, "_blank", "noopener,noreferrer")
             }
         } catch (err) {
         } finally {

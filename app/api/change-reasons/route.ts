@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     }
 
     const user = verifyToken(token);
-    if (user.role !== "ADMIN") {
+    if (user!.role !== "ADMIN") {
       return NextResponse.json({ error: "You don't have permission to do this." }, { status: 403 });
     }
 
@@ -59,6 +59,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(newReason, { status: 201 });
   } catch (error) {
+    const token = getTokenFromRequest(request);
+    const user = token ? verifyToken(token) : null;
     await logError({
       source: "api/change-reasons",
       message: error instanceof Error ? error.message : "Unknown error",

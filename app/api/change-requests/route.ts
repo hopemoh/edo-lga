@@ -15,6 +15,9 @@ export async function GET(request: NextRequest) {
     }
 
     const user = verifyToken(token);
+    if (!user) {
+      return NextResponse.json({ error: "You need to log in to access this." }, { status: 401 });
+    }
     const { searchParams } = new URL(request.url);
     const staffId = searchParams.get("staffId");
     const status = searchParams.get("status");
@@ -38,6 +41,8 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(requests);
   } catch (error) {
+    const token = getTokenFromRequest(request);
+    const user = token ? verifyToken(token) : null;
     await logError({
       source: "api/change-requests",
       message: error instanceof Error ? error.message : "Unknown error",
@@ -146,6 +151,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(newRequest, { status: 201 });
   } catch (error) {
+    const token = getTokenFromRequest(request);
+    const user = token ? verifyToken(token) : null;
     await logError({
       source: "api/change-requests",
       message: error instanceof Error ? error.message : "Unknown error",

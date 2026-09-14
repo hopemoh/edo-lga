@@ -36,6 +36,8 @@ export async function GET(
 
     return NextResponse.json(history);
   } catch (error) {
+    const token = getTokenFromRequest(request);
+    const user = token ? verifyToken(token) : null;
     await logError({
       source: "api/staff/[id]/document-history",
       message: error instanceof Error ? error.message : "Unknown error",

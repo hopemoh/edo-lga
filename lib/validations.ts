@@ -22,10 +22,19 @@ export const staffCreateSchema = z.object({
 
 export const staffUpdateSchema = staffCreateSchema.partial()
 
+const ALLOWED_CHANGE_FIELDS = [
+  "name", "phoneNumber", "sex", "dateOfBirth", "dateOfFirstAppt",
+  "dateOfConf", "dateOfPresentAppt", "sgl", "recommendedRetirementDate",
+  "rank", "status", "qualifications", "remark", "documentUrl",
+]
+
 export const changeRequestSchema = z.object({
   staffId: z.string().min(1, "Staff is required"),
   type: z.enum(["DATA", "DOCUMENT"]).default("DATA"),
-  changes: z.record(z.any()).refine((obj) => Object.keys(obj).length > 0, "At least one field must be changed"),
+  changes: z.record(z.any()).refine(
+    (obj) => Object.keys(obj).length > 0 && Object.keys(obj).every((k) => ALLOWED_CHANGE_FIELDS.includes(k)),
+    "At least one valid field must be changed"
+  ),
   reason: z.string().min(1, "Reason is required"),
   reasonId: z.string().optional().nullable(),
   selectedFields: z.array(z.string()).optional().nullable(),

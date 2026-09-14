@@ -122,6 +122,8 @@ export async function POST(
 
     return NextResponse.json({ success: true, status: updateData.status });
   } catch (error) {
+    const token = getTokenFromRequest(request);
+    const user = token ? verifyToken(token) : null;
     await logError({
       source: "api/change-requests/[id]/approve",
       message: error instanceof Error ? error.message : "Unknown error",
@@ -205,6 +207,8 @@ export async function PUT(
 
     return NextResponse.json({ success: true, status: "REJECTED" });
   } catch (error) {
+    const token = getTokenFromRequest(request);
+    const user = token ? verifyToken(token) : null;
     await logError({
       source: "api/change-requests/[id]/approve",
       message: error instanceof Error ? error.message : "Unknown error",
@@ -306,6 +310,8 @@ export async function PATCH(
 
     return NextResponse.json({ success: true, status: "ADMIN_CORRECTED" });
   } catch (error) {
+    const token = getTokenFromRequest(request);
+    const user = token ? verifyToken(token) : null;
     await logError({
       source: "api/change-requests/[id]/approve",
       message: error instanceof Error ? error.message : "Unknown error",

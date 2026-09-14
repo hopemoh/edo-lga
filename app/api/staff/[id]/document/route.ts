@@ -53,6 +53,13 @@ export async function POST(
       );
     }
 
+    if (file.size > 10 * 1024 * 1024) {
+      return NextResponse.json({ error: "File size must be less than 10MB" }, { status: 400 });
+    }
+    if (file.type !== "application/pdf") {
+      return NextResponse.json({ error: "Only PDF files are allowed" }, { status: 400 });
+    }
+
     const buffer = Buffer.from(await file.arrayBuffer());
     const key = generateS3Key(S3_FOLDERS.STAFF_DOCUMENTS, file.name);
     const documentUrl = await uploadToS3(buffer, key, file.type || "application/pdf");
@@ -72,6 +79,8 @@ export async function POST(
 
     return NextResponse.json({ documentUrl, message: "Document uploaded successfully" });
   } catch (error) {
+    const token = getTokenFromRequest(request);
+    const user = token ? verifyToken(token) : null;
     await logError({
       source: "api/staff/[id]/document",
       message: error instanceof Error ? error.message : "Unknown error",

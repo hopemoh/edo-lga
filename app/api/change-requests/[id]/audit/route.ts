@@ -48,6 +48,8 @@ export async function GET(
       auditLogs: auditLogsResult,
     });
   } catch (error) {
+    const token = getTokenFromRequest(request);
+    const user = token ? verifyToken(token) : null;
     await logError({
       source: "api/change-requests/[id]/audit",
       message: error instanceof Error ? error.message : "Unknown error",

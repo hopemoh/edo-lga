@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { sanctions } from "@/lib/db/schema";
 import { getTokenFromRequest, verifyToken } from "@/lib/auth";
+import { sanctionSchema } from "@/lib/validations";
 import { logError } from "@/lib/error-logger";
 
 export async function PUT(
@@ -20,14 +21,13 @@ export async function PUT(
 
     const { id } = await params;
     const body = await request.json();
-    const { name } = body;
 
-    if (!name) {
-      return NextResponse.json(
-        { error: "Name is required" },
-        { status: 400 }
-      );
+    const parsed = sanctionSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
     }
+
+    const { name } = parsed.data;
 
     const sanction = await db.query.sanctions.findFirst({
       where: eq(sanctions.id, id),
@@ -59,6 +59,8 @@ export async function PUT(
 
     return NextResponse.json(updated);
   } catch (error) {
+    const token = getTokenFromRequest(request);
+    const user = token ? verifyToken(token) : null;
     await logError({
       source: "api/sanctions/[id]",
       message: error instanceof Error ? error.message : "Unknown error",
@@ -104,6 +106,8 @@ export async function DELETE(
 
     return NextResponse.json({ message: "Sanction deleted" });
   } catch (error) {
+    const token = getTokenFromRequest(request);
+    const user = token ? verifyToken(token) : null;
     await logError({
       source: "api/sanctions/[id]",
       message: error instanceof Error ? error.message : "Unknown error",

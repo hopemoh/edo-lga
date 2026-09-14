@@ -31,6 +31,8 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ data: logs, total: logs.length });
   } catch (error) {
+    const token = getTokenFromRequest(request);
+    const user = token ? verifyToken(token) : null;
     await logError({
       source: "api/approval-logs",
       message: error instanceof Error ? error.message : "Unknown error",

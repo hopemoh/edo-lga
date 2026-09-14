@@ -5,9 +5,15 @@ import { staff, lgas } from "@/lib/db/schema";
 import { generateToken } from "@/lib/auth";
 import { loginSchema } from "@/lib/validations";
 import { logError } from "@/lib/error-logger";
+import { rateLimit } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
   try {
+    const ip = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown";
+    if (!rateLimit(`login:${ip}`, 10, 60_000)) {
+      return NextResponse.json({ error: "Too many login attempts. Please try again later." }, { status: 429 });
+    }
+
     const body = await request.json();
     const parsed = loginSchema.safeParse(body);
     if (!parsed.success) {

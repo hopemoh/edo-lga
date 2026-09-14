@@ -91,3 +91,20 @@ export function useBulkImport() {
     },
   })
 }
+
+export function useBulkUpdate() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (formData: FormData) =>
+      apiFetch("/api/staff/bulk", {
+        method: "PUT",
+        body: formData,
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["staff"] })
+    },
+    onError: () => {
+      toast.error("Update failed. Please try again.")
+    },
+  })
+}
