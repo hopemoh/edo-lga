@@ -1,44 +1,16 @@
 "use client"
 
-import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { Eye, ClipboardCheck, BarChart3, AlertTriangle } from "lucide-react"
 import RichTextDisplay from "@/components/ui/rich-text-display"
-
-interface SectionContent {
-    title: string
-    subtitle: string
-    content: string
-}
+import { useContent } from "@/hooks/use-resources"
 
 export default function MonitoringSection() {
-    const [content, setContent] = useState<SectionContent>({
-        title: "Monitoring Team",
-        subtitle: "Oversight & Evaluation",
-        content: "The Monitoring Team ensures compliance with civil service rules and regulations across all LGAs. Regular inspections and evaluations help maintain standards and identify areas for improvement."
-    })
-
-    useEffect(() => {
-        fetchContent()
-    }, [])
-
-    const fetchContent = async () => {
-        try {
-            const response = await fetch('/api/content')
-            if (response.ok) {
-                const data = await response.json()
-                const sectionData = data.find((item: SectionContent & { section: string }) => item.section === 'monitoring')
-                if (sectionData) {
-                    setContent({
-                        title: sectionData.title,
-                        subtitle: sectionData.subtitle || "Oversight & Evaluation",
-                        content: sectionData.content
-                    })
-                }
-            }
-        } catch (error) {
-        }
-    }
+    const { data: contentData } = useContent()
+    const sectionData = contentData?.find((item: any) => item.section === 'monitoring')
+    const content = sectionData
+        ? { title: sectionData.title, subtitle: sectionData.subtitle || "Oversight & Evaluation", content: sectionData.content }
+        : { title: "Monitoring Team", subtitle: "Oversight & Evaluation", content: "The Monitoring Team ensures compliance with civil service rules and regulations across all LGAs. Regular inspections and evaluations help maintain standards and identify areas for improvement." }
 
     const activities = [
         {

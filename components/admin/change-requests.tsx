@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { CheckCircle, XCircle, Clock, AlertCircle, Eye } from "lucide-react"
 import { motion } from "framer-motion"
 import AuditLogViewer from "./audit-log-viewer"
+import { useChangeRequests, useApproveRequest, useRejectRequest, useCorrectRequest } from "@/hooks/use-change-requests"
 
 interface ChangeRequest {
   id: string
@@ -23,143 +24,88 @@ interface ChangeRequest {
   isAdminCorrectable?: boolean
   correctionWindowExpiresAt?: string
   adminApprovedBy?: string
+  adminApprovedByName?: string
   secretaryApprovedBy?: string
+  secretaryApprovedByName?: string
   chairmanApprovedBy?: string
+  chairmanApprovedByName?: string
   rejectedBy?: string
   rejectedReason?: string
 }
 
 export default function ChangeRequests() {
-  const [requests, setRequests] = useState<ChangeRequest[]>([])
-  const [loading, setLoading] = useState(true)
   const [currentUser, setCurrentUser] = useState<any>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
-  const [actionInProgress, setActionInProgress] = useState<string | null>(null)
   const [rejectionReason, setRejectionReason] = useState<Record<string, string>>({})
   const [approvalComment, setApprovalComment] = useState<Record<string, string>>({})
   const [showAudit, setShowAudit] = useState<string | null>(null)
+
+  const { data: requests = [], isLoading: loading } = useChangeRequests({ includeAudit: true } as any)
+  const approveMutation = useApproveRequest()
+  const rejectMutation = useRejectRequest()
+  const correctMutation = useCorrectRequest()
 
   useEffect(() => {
     const user = localStorage.getItem("currentUser")
     if (user) {
       setCurrentUser(JSON.parse(user))
     }
-    fetchRequests()
   }, [])
 
-  const fetchRequests = async () => {
-    try {
-      const token = localStorage.getItem('token')
-      const response = await fetch('/api/change-requests?includeAudit=true', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-      if (response.ok) {
-        const data = await response.json()
-        setRequests(data)
-      }
-    } catch (error) {
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const approveRequest = async (id: string) => {
-    try {
-      setActionInProgress(id)
-      const token = localStorage.getItem('token')
-      const response = await fetch(`/api/change-requests/${id}/approve`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+  const approveRequest = (id: string) => {
+    approveMutation.mutate(
+      { id, comments: approvalComment[id] || undefined },
+      {
+        onSuccess: () => {
+          setApprovalComment(prev => {
+            const newComments = { ...prev }
+            delete newComments[id]
+            return newComments
+          })
         },
-        body: JSON.stringify({
-          comments: approvalComment[id] || null
-        })
-      })
-      if (response.ok) {
-        setApprovalComment(prev => {
-          const newComments = { ...prev }
-          delete newComments[id]
-          return newComments
-        })
-        await fetchRequests()
-      } else {
-        const error = await response.json()
-        alert(`Error: ${error.error}`)
+        onError: (err: any) => {
+          alert(`Error: ${err.message || "Couldn't save your changes. Please try again."}`)
+        },
       }
-    } catch (error) {
-      alert("Couldn't save your changes. Please try again.")
-    } finally {
-      setActionInProgress(null)
-    }
+    )
   }
 
-  const rejectRequest = async (id: string) => {
+  const rejectRequest = (id: string) => {
     const reason = rejectionReason[id]?.trim()
     if (!reason) {
       alert('Please provide a rejection reason')
       return
     }
 
-    try {
-      setActionInProgress(id)
-      const token = localStorage.getItem('token')
-      const response = await fetch(`/api/change-requests/${id}/approve`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+    rejectMutation.mutate(
+      { id, reason },
+      {
+        onSuccess: () => {
+          setRejectionReason(prev => {
+            const newReasons = { ...prev }
+            delete newReasons[id]
+            return newReasons
+          })
         },
-        body: JSON.stringify({ reason })
-      })
-      if (response.ok) {
-        setRejectionReason(prev => {
-          const newReasons = { ...prev }
-          delete newReasons[id]
-          return newReasons
-        })
-        await fetchRequests()
-      } else {
-        const error = await response.json()
-        alert(`Error: ${error.error}`)
+        onError: (err: any) => {
+          alert(`Error: ${err.message || "Couldn't save your changes. Please try again."}`)
+        },
       }
-    } catch (error) {
-      alert("Couldn't save your changes. Please try again.")
-    } finally {
-      setActionInProgress(null)
-    }
+    )
   }
 
-  const correctRequest = async (id: string) => {
-    try {
-      setActionInProgress(id)
-      const token = localStorage.getItem('token')
-      const request = requests.find(r => r.id === id)
-      if (!request) return
+  const correctRequest = (id: string) => {
+    const request = (requests as ChangeRequest[]).find(r => r.id === id)
+    if (!request) return
 
-      const response = await fetch(`/api/change-requests/${id}/approve`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+    correctMutation.mutate(
+      { id, changes: request.changes, reason: `Admin correction within 24-hour window` },
+      {
+        onError: (err: any) => {
+          alert(`Error: ${err.message || "Couldn't save your changes. Please try again."}`)
         },
-        body: JSON.stringify({
-          changes: request.changes,
-          reason: `Admin correction within 24-hour window`
-        })
-      })
-      if (response.ok) {
-        await fetchRequests()
-      } else {
-        const error = await response.json()
-        alert(`Error: ${error.error}`)
       }
-    } catch (error) {
-      alert("Couldn't save your changes. Please try again.")
-    } finally {
-      setActionInProgress(null)
-    }
+    )
   }
 
   const getStatusBadge = (status: string) => {
@@ -242,13 +188,13 @@ export default function ChangeRequests() {
     <div className="space-y-4">
       <h3 className="text-xl font-semibold">Change Requests & Approval Flow</h3>
 
-      {requests.length === 0 ? (
+      {(requests as ChangeRequest[]).length === 0 ? (
         <Card className="p-8 text-center">
           <p className="text-muted-foreground">No change requests found</p>
         </Card>
       ) : (
         <div className="space-y-4">
-          {requests.map((request) => (
+          {(requests as ChangeRequest[]).map((request) => (
             <motion.div
               key={request.id}
               initial={{ opacity: 0, y: 10 }}
@@ -305,13 +251,13 @@ export default function ChangeRequests() {
                 {request.status !== 'PENDING' && request.status !== 'REJECTED' && (
                   <div className="bg-blue-50 border border-blue-200 rounded p-3 mb-3 text-sm space-y-1">
                     {request.adminApprovedBy && (
-                      <p className="text-blue-700">✓ Admin Approved by {request.adminApprovedBy}</p>
+                      <p className="text-blue-700">✓ Admin Approved by {request.adminApprovedByName || request.adminApprovedBy}</p>
                     )}
                     {request.secretaryApprovedBy && (
-                      <p className="text-blue-700">✓ Secretary Approved by {request.secretaryApprovedBy}</p>
+                      <p className="text-blue-700">✓ Secretary Approved by {request.secretaryApprovedByName || request.secretaryApprovedBy}</p>
                     )}
                     {request.chairmanApprovedBy && (
-                      <p className="text-blue-700">✓ Chairman Approved by {request.chairmanApprovedBy}</p>
+                      <p className="text-blue-700">✓ Chairman Approved by {request.chairmanApprovedByName || request.chairmanApprovedBy}</p>
                     )}
                   </div>
                 )}
@@ -344,11 +290,11 @@ export default function ChangeRequests() {
                         />
                         <Button
                           onClick={() => approveRequest(request.id)}
-                          disabled={actionInProgress === request.id}
+                          disabled={approveMutation.isPending}
                           size="sm"
                           className="bg-green-600 hover:bg-green-700"
                         >
-                          {actionInProgress === request.id ? 'Processing...' : `Approve as ${currentUser?.role}`}
+                          {approveMutation.isPending ? 'Processing...' : `Approve as ${currentUser?.role}`}
                         </Button>
                       </div>
                     </div>
@@ -369,11 +315,11 @@ export default function ChangeRequests() {
                         />
                         <Button
                           onClick={() => rejectRequest(request.id)}
-                          disabled={actionInProgress === request.id}
+                          disabled={rejectMutation.isPending}
                           size="sm"
                           variant="destructive"
                         >
-                          {actionInProgress === request.id ? 'Processing...' : 'Reject'}
+                          {rejectMutation.isPending ? 'Processing...' : 'Reject'}
                         </Button>
                       </div>
                     </div>
@@ -382,11 +328,11 @@ export default function ChangeRequests() {
                   {canCorrect(request) && (
                     <Button
                       onClick={() => correctRequest(request.id)}
-                      disabled={actionInProgress === request.id}
+                      disabled={correctMutation.isPending}
                       size="sm"
                       className="bg-amber-600 hover:bg-amber-700 w-full"
                     >
-                      {actionInProgress === request.id ? 'Processing...' : 'Correct Document (Admin Only)'}
+                      {correctMutation.isPending ? 'Processing...' : 'Correct Document (Admin Only)'}
                     </Button>
                   )}
                 </div>

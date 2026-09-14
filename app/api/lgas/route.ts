@@ -11,6 +11,8 @@ import {
   generateS3Key,
 } from "@/lib/s3";
 import { safeParseJson } from "@/lib/utils";
+import { lgaSchema } from "@/lib/validations";
+import { logError } from "@/lib/error-logger";
 
 export async function GET() {
   try {
@@ -33,6 +35,11 @@ export async function GET() {
 
     return NextResponse.json(lgasWithStaffCount);
   } catch (error) {
+    await logError({
+      source: "api/lgas",
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     return NextResponse.json(
       { error: "Couldn't load LGAs. Please try again." },
       { status: 500 }
@@ -56,18 +63,17 @@ export async function POST(request: NextRequest) {
     const name = formData.get("name") as string;
     const zone = formData.get("zone") as string;
     const description = formData.get("description") as string;
+
+    const parsed = lgaSchema.safeParse({ name, zone, description });
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    }
+
     const landmarks = formData.get("landmarks") as string;
     const activities = formData.get("activities") as string;
     const mapX = formData.get("mapX") as string;
     const mapY = formData.get("mapY") as string;
     const imageFile = formData.get("image") as File | null;
-
-    if (!name || !zone || !description) {
-      return NextResponse.json(
-        { error: "Name, zone, and description are required" },
-        { status: 400 }
-      );
-    }
 
     const lgaId = crypto.randomUUID();
     const detailId = crypto.randomUUID();
@@ -109,6 +115,14 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(newLga, { status: 201 });
   } catch (error) {
+    await logError({
+      source: "api/lgas",
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      request,
+      userId: user?.id,
+      userRole: user?.role,
+    });
     return NextResponse.json(
       { error: "Couldn't save the LGA. Please try again." },
       { status: 500 }

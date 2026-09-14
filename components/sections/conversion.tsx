@@ -1,68 +1,20 @@
 "use client"
 
-import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { RefreshCw, ArrowUpCircle, FileCheck, GraduationCap, ArrowRight, ChevronDown } from "lucide-react"
 import RichTextDisplay from "@/components/ui/rich-text-display"
-
-interface SectionContent {
-    title: string
-    subtitle: string
-    content: string
-}
-
-interface Highlight {
-    id: string
-    title: string
-    subtitle: string
-    description: string
-    image: string | null
-}
+import { useContent, useHighlights } from "@/hooks/use-resources"
 
 export default function ConversionSection() {
-    const [content, setContent] = useState<SectionContent>({
-        title: "Cadre Conversion & Advancement",
-        subtitle: "Career Progression",
-        content: "Staff cadre conversion and advancement programs enable employees to transition between career paths or advance to higher cadres based on additional qualifications and demonstrated competence."
-    })
-
-    const [highlights, setHighlights] = useState<Highlight[]>([])
+    const { data: contentData } = useContent()
+    const { data: highlights } = useHighlights("CONVERSION")
     const router = useRouter()
 
-    useEffect(() => {
-        fetchContent()
-        fetchHighlights()
-    }, [])
-
-    const fetchContent = async () => {
-        try {
-            const response = await fetch('/api/content')
-            if (response.ok) {
-                const data = await response.json()
-                const sectionData = data.find((item: SectionContent & { section: string }) => item.section === 'conversion')
-                if (sectionData) {
-                    setContent({
-                        title: sectionData.title,
-                        subtitle: sectionData.subtitle || "Career Progression",
-                        content: sectionData.content
-                    })
-                }
-            }
-        } catch (error) {
-        }
-    }
-
-    const fetchHighlights = async () => {
-        try {
-            const response = await fetch('/api/highlights?type=CONVERSION')
-            if (response.ok) {
-                const data = await response.json()
-                setHighlights(data)
-            }
-        } catch (error) {
-        }
-    }
+    const sectionData = contentData?.find((item: any) => item.section === 'conversion')
+    const content = sectionData
+        ? { title: sectionData.title, subtitle: sectionData.subtitle || "Career Progression", content: sectionData.content }
+        : { title: "Cadre Conversion & Advancement", subtitle: "Career Progression", content: "Staff cadre conversion and advancement programs enable employees to transition between career paths or advance to higher cadres based on additional qualifications and demonstrated competence." }
 
     return (
         <section id="conversion" className="py-20 px-4 md:px-8 lg:px-12 bg-linear-to-br from-background via-card to-background">
@@ -92,7 +44,7 @@ export default function ConversionSection() {
                         Recent Conversions & Advancements
                     </h3>
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {highlights.slice(0, 4).map((staff, index) => (
+                        {(highlights || []).slice(0, 4).map((staff: any, index: number) => (
                             <motion.div
                                 key={staff.id}
                                 initial={{ opacity: 0, scale: 0.95 }}
@@ -126,7 +78,7 @@ export default function ConversionSection() {
                         ))}
                     </div>
 
-                    {highlights.length > 4 && (
+                    {(highlights || []).length > 4 && (
                         <motion.button
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}

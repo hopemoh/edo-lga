@@ -46,6 +46,12 @@ export const highlightTypeEnum = pgEnum("HighlightType", [
   "POSTING",
 ]);
 
+export const errorLogLevelEnum = pgEnum("ErrorLogLevel", [
+  "ERROR",
+  "WARNING",
+  "INFO",
+]);
+
 // ─── Tables ─────────────────────────────────────────────────────────────────
 
 export const lgas = pgTable(
@@ -254,14 +260,17 @@ export const changeRequests = pgTable(
     adminNote: text("adminNote"),
 
     adminApprovedBy: text("adminApprovedBy"),
+    adminApprovedByName: text("adminApprovedByName"),
     adminApprovedAt: timestamp("adminApprovedAt"),
     adminApprovedComments: text("adminApprovedComments"),
 
     secretaryApprovedBy: text("secretaryApprovedBy"),
+    secretaryApprovedByName: text("secretaryApprovedByName"),
     secretaryApprovedAt: timestamp("secretaryApprovedAt"),
     secretaryApprovedComments: text("secretaryApprovedComments"),
 
     chairmanApprovedBy: text("chairmanApprovedBy"),
+    chairmanApprovedByName: text("chairmanApprovedByName"),
     chairmanApprovedAt: timestamp("chairmanApprovedAt"),
     chairmanApprovedComments: text("chairmanApprovedComments"),
 
@@ -329,6 +338,30 @@ export const auditLogs = pgTable(
     index("audit_logs_changeRequestId_idx").on(table.changeRequestId),
     index("audit_logs_staffId_idx").on(table.staffId),
     index("audit_logs_timestamp_idx").on(table.timestamp),
+  ]
+);
+
+export const errorLogs = pgTable(
+  "error_logs",
+  {
+    id: text("id").primaryKey(),
+    timestamp: timestamp("timestamp").notNull().defaultNow(),
+    level: errorLogLevelEnum("level").notNull().default("ERROR"),
+    source: text("source").notNull(),
+    message: text("message").notNull(),
+    stack: text("stack"),
+    userId: text("userId"),
+    userRole: text("userRole"),
+    requestMethod: text("requestMethod"),
+    requestPath: text("requestPath"),
+    resolved: boolean("resolved").notNull().default(false),
+    resolvedBy: text("resolvedBy"),
+    resolvedAt: timestamp("resolvedAt"),
+  },
+  (table) => [
+    index("error_logs_timestamp_idx").on(table.timestamp),
+    index("error_logs_level_idx").on(table.level),
+    index("error_logs_resolved_idx").on(table.resolved),
   ]
 );
 

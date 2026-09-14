@@ -11,6 +11,7 @@ import {
   generateS3Key,
 } from "@/lib/s3";
 import { safeParseJson } from "@/lib/utils";
+import { logError } from "@/lib/error-logger";
 
 export async function GET(
   request: NextRequest,
@@ -37,6 +38,12 @@ export async function GET(
 
     return NextResponse.json({ ...lga, staffCount });
   } catch (error) {
+    await logError({
+      source: "api/lgas/[id]",
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      request,
+    });
     return NextResponse.json(
       { error: "Couldn't load the LGA. Please try again." },
       { status: 500 }
@@ -126,6 +133,14 @@ export async function PUT(
 
     return NextResponse.json(updatedLga);
   } catch (error) {
+    await logError({
+      source: "api/lgas/[id]",
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      request,
+      userId: user?.id,
+      userRole: user?.role,
+    });
     return NextResponse.json(
       { error: "Couldn't save the LGA. Please try again." },
       { status: 500 }

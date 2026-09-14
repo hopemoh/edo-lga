@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getTokenFromRequest, verifyToken } from "@/lib/auth";
 import { uploadToS3, S3_FOLDERS, generateS3Key } from "@/lib/s3";
+import { logError } from "@/lib/error-logger";
 
 export async function POST(request: NextRequest) {
   try {
@@ -39,6 +40,14 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ url }, { status: 201 });
   } catch (error) {
+    await logError({
+      source: "api/documents/upload",
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      request,
+      userId: user?.id,
+      userRole: user?.role,
+    });
     return NextResponse.json(
       { error: "Document upload failed. Please check your connection and try again." },
       { status: 500 }

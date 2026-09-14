@@ -3,12 +3,19 @@ import { db } from "@/lib/db";
 import { contentSections } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { getTokenFromRequest, verifyToken } from "@/lib/auth";
+import { contentSectionSchema } from "@/lib/validations";
+import { logError } from "@/lib/error-logger";
 
 export async function GET() {
   try {
     const sections = await db.query.contentSections.findMany();
     return NextResponse.json(sections);
   } catch (error) {
+    await logError({
+      source: "api/content",
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     return NextResponse.json(
       { error: "Couldn't load content. Please try again." },
       { status: 500 }
@@ -29,14 +36,11 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { section, title, subtitle, content } = body;
-
-    if (!section || !title || !content) {
-      return NextResponse.json(
-        { error: "section, title, and content are required" },
-        { status: 400 }
-      );
+    const parsed = contentSectionSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
     }
+    const { section, title, subtitle, content } = parsed.data;
 
     // Upsert: check if exists
     const existing = await db.query.contentSections.findFirst({
@@ -64,6 +68,14 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(updated);
   } catch (error) {
+    await logError({
+      source: "api/content",
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      request,
+      userId: user?.id,
+      userRole: user?.role,
+    });
     return NextResponse.json(
       { error: "Couldn't save content. Please try again." },
       { status: 500 }

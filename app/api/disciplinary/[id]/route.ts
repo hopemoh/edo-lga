@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { disciplinaryCases } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { getTokenFromRequest, verifyToken } from "@/lib/auth";
+import { logError } from "@/lib/error-logger";
 
 export async function PUT(
   request: NextRequest,
@@ -41,6 +42,14 @@ export async function PUT(
 
     return NextResponse.json(updated);
   } catch (error) {
+    await logError({
+      source: "api/disciplinary/[id]",
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      request,
+      userId: user?.id,
+      userRole: user?.role,
+    });
     return NextResponse.json(
       { error: "Couldn't update the record. Please try again." },
       { status: 500 }
@@ -67,6 +76,14 @@ export async function DELETE(
     await db.delete(disciplinaryCases).where(eq(disciplinaryCases.id, id));
     return NextResponse.json({ success: true });
   } catch (error) {
+    await logError({
+      source: "api/disciplinary/[id]",
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      request,
+      userId: user?.id,
+      userRole: user?.role,
+    });
     return NextResponse.json(
       { error: "Couldn't remove the record. Please try again." },
       { status: 500 }

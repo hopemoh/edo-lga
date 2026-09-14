@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { approvalLogs, changeRequests, staff } from "@/lib/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { getTokenFromRequest, verifyToken } from "@/lib/auth";
+import { logError } from "@/lib/error-logger";
 
 export async function GET(request: NextRequest) {
   try {
@@ -30,6 +31,14 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ data: logs, total: logs.length });
   } catch (error) {
+    await logError({
+      source: "api/approval-logs",
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      request,
+      userId: user?.id,
+      userRole: user?.role,
+    });
     return NextResponse.json(
       { error: "Couldn't load approval logs. Please try again." },
       { status: 500 }

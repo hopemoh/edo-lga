@@ -42,14 +42,6 @@ export default function StaffTable({ staff, onUpdate, onEdit, isAdmin = false, c
                 <th className="px-4 py-3 text-left font-medium">Rank</th>
                 <th className="px-4 py-3 text-left font-medium">Qualifications</th>
                 <th className="px-4 py-3 text-left font-medium">SGL</th>
-                {/* <th className="px-4 py-3 text-left font-medium">DATE OF BIRTH</th> */}
-                <th className="px-4 py-3 text-left font-medium">DATE OF 1ST APPT</th>
-                <th className="px-4 py-3 text-left font-medium">DATE OF CONF</th>
-                <th className="px-4 py-3 text-left font-medium">Pre Appt</th>
-                <th className="px-4 py-3 text-left font-medium">LGA Origin</th>
-                {/* <th className="px-4 py-3 text-left font-medium">Phone</th> */}
-                <th className="px-4 py-3 text-left font-medium">Remark</th>
-                <th className="px-4 py-3 text-left font-medium">Retirement</th>
                 <th className="px-4 py-3 text-left font-medium">Actions</th>
               </tr>
             </thead>
@@ -68,14 +60,6 @@ export default function StaffTable({ staff, onUpdate, onEdit, isAdmin = false, c
                       }
                     </td>
                     <td className="px-4 py-3">{s.sgl}</td>
-                    {/* <td className="px-4 py-3 whitespace-nowrap">{formatDate(s.dateOfBirth)}</td> */}
-                    <td className="px-4 py-3 whitespace-nowrap">{formatDate(s.dateOfFirstAppt)}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">{formatDate(s.dateOfConf)}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">{formatDate(s.dateOfPresentAppt)}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">{s.lga?.name || s.lgaOfOrigin}</td>
-                    {/* <td className="px-4 py-3">{s.phoneNumber}</td> */}
-                    <td className="px-4 py-3 text-xs max-w-[150px] truncate">{s.remark || 'N/A'}</td>
-                    <td className="px-4 py-3">{formatDate(s.recommendedRetirementDate)}</td>
                     <td className="px-4 py-3 flex gap-2">
                       {isAdmin ? (
                         <Button

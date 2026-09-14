@@ -1,17 +1,14 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { toast } from "sonner"
 import { Plus, Trash2, Edit2, Check, X } from "lucide-react"
-
-interface Sanction {
-    id: string
-    name: string
-}
+import { useSanctions, useCreateSanction, useUpdateSanction, useDeleteSanction } from "@/hooks/use-resources"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { sanctionSchema } from "@/lib/validations"
 
 interface SanctionManagementModalProps {
     open: boolean
@@ -19,93 +16,43 @@ interface SanctionManagementModalProps {
 }
 
 export default function SanctionManagementModal({ open, onClose }: SanctionManagementModalProps) {
-    const [sanctions, setSanctions] = useState<Sanction[]>([])
-    const [loading, setLoading] = useState(false)
-    const [newSanction, setNewSanction] = useState("")
     const [editingId, setEditingId] = useState<string | null>(null)
     const [editingName, setEditingName] = useState("")
 
-    useEffect(() => {
-        if (open) {
-            fetchSanctions()
-        }
-    }, [open])
+    const { data: sanctions = [] } = useSanctions()
+    const createSanction = useCreateSanction()
+    const updateSanction = useUpdateSanction()
+    const deleteSanction = useDeleteSanction()
 
-    const fetchSanctions = async () => {
-        try {
-            const response = await fetch('/api/sanctions')
-            if (response.ok) {
-                const data = await response.json()
-                setSanctions(data)
-            }
-        } catch (error) {
-        }
-    }
+    const { register, handleSubmit, formState: { errors }, reset } = useForm({
+        resolver: zodResolver(sanctionSchema),
+        defaultValues: {
+            name: "",
+            description: "",
+            isActive: true,
+        },
+    })
 
-    const handleAdd = async () => {
-        if (!newSanction.trim()) return
-        setLoading(true)
-        try {
-            const response = await fetch('/api/sanctions', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: newSanction })
-            })
-            if (response.ok) {
-                toast.success("Sanction added")
-                setNewSanction("")
-                fetchSanctions()
-            } else {
-                toast.error("Couldn't save your changes. Please try again.")
-            }
-        } catch (error) {
-            toast.error("You appear to be offline. Please check your connection.")
-        } finally {
-            setLoading(false)
-        }
-    }
+    const handleAdd = handleSubmit((data) => {
+        createSanction.mutate({ name: data.name }, {
+            onSuccess: () => {
+                reset()
+            },
+        })
+    })
 
-    const handleUpdate = async (id: string) => {
+    const handleUpdate = (id: string) => {
         if (!editingName.trim()) return
-        setLoading(true)
-        try {
-            const response = await fetch(`/api/sanctions/${id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: editingName })
-            })
-            if (response.ok) {
-                toast.success("Sanction updated")
+        updateSanction.mutate({ id, data: { name: editingName } }, {
+            onSuccess: () => {
                 setEditingId(null)
-                fetchSanctions()
-            } else {
-                toast.error("Couldn't save your changes. Please try again.")
-            }
-        } catch (error) {
-            toast.error("You appear to be offline. Please check your connection.")
-        } finally {
-            setLoading(false)
-        }
+            },
+        })
     }
 
-    const handleDelete = async (id: string) => {
+    const handleDelete = (id: string) => {
         if (!confirm("Are you sure you want to delete this sanction?")) return
-        setLoading(true)
-        try {
-            const response = await fetch(`/api/sanctions/${id}`, {
-                method: 'DELETE'
-            })
-            if (response.ok) {
-                toast.success("Sanction deleted")
-                fetchSanctions()
-            } else {
-                toast.error("Couldn't save your changes. Please try again.")
-            }
-        } catch (error) {
-            toast.error("You appear to be offline. Please check your connection.")
-        } finally {
-            setLoading(false)
-        }
+        deleteSanction.mutate(id)
     }
 
     return (
@@ -115,20 +62,24 @@ export default function SanctionManagementModal({ open, onClose }: SanctionManag
                     <DialogTitle>Manage Sanctions</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
-                    <div className="flex gap-2">
-                        <Input
-                            placeholder="New sanction name..."
-                            value={newSanction}
-                            onChange={(e) => setNewSanction(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
-                        />
-                        <Button onClick={handleAdd} disabled={loading || !newSanction.trim()}>
+                    <form onSubmit={handleAdd} className="flex gap-2">
+                        <div className="flex-1 space-y-1">
+                            <Input
+                                placeholder="New sanction name..."
+                                {...register("name")}
+                                onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
+                            />
+                            {errors.name && (
+                                <p className="text-sm text-destructive">{errors.name.message}</p>
+                            )}
+                        </div>
+                        <Button type="submit" disabled={createSanction.isPending}>
                             <Plus className="w-4 h-4" />
                         </Button>
-                    </div>
+                    </form>
 
                     <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
-                        {sanctions.map((s) => (
+                        {sanctions.map((s: any) => (
                             <div key={s.id} className="flex items-center justify-between p-2 rounded-md border bg-muted/30">
                                 {editingId === s.id ? (
                                     <div className="flex items-center gap-2 flex-1 mr-2">
@@ -138,7 +89,7 @@ export default function SanctionManagementModal({ open, onClose }: SanctionManag
                                             className="h-8"
                                             autoFocus
                                         />
-                                        <Button size="icon" variant="ghost" className="h-8 w-8 text-emerald-600" onClick={() => handleUpdate(s.id)}>
+                                        <Button size="icon" variant="ghost" className="h-8 w-8 text-emerald-600" onClick={() => handleUpdate(s.id)} disabled={updateSanction.isPending}>
                                             <Check className="w-4 h-4" />
                                         </Button>
                                         <Button size="icon" variant="ghost" className="h-8 w-8 text-rose-600" onClick={() => setEditingId(null)}>
@@ -155,7 +106,7 @@ export default function SanctionManagementModal({ open, onClose }: SanctionManag
                                             }}>
                                                 <Edit2 className="w-4 h-4" />
                                             </Button>
-                                            <Button size="icon" variant="ghost" className="h-8 w-8 text-rose-600" onClick={() => handleDelete(s.id)}>
+                                            <Button size="icon" variant="ghost" className="h-8 w-8 text-rose-600" onClick={() => handleDelete(s.id)} disabled={deleteSanction.isPending}>
                                                 <Trash2 className="w-4 h-4" />
                                             </Button>
                                         </div>

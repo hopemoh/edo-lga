@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -24,14 +24,16 @@ import type { LogEntry, Staff, LGA } from "@/lib/types"
 import { LogOut, Upload, Plus, Settings, Edit, Users, MapPin, Activity, Bell, Star, ShieldAlert, CheckCircle } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { generateDummyStaff } from "@/lib/dummy-data"
+import { useStaff } from "@/hooks/use-staff"
+import { useChangeRequests } from "@/hooks/use-change-requests"
+import { useLogs } from "@/hooks/use-resources"
+import { useAuthStore } from "@/lib/store"
 
 export default function StaffDashboard() {
   const router = useRouter()
+  const { user: currentUser, isAdmin, logout } = useAuthStore()
   const [selectedLGA, setSelectedLGA] = useState<LGA | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
-  const [staff, setStaff] = useState<Staff[]>([])
-  const [logs, setLogs] = useState<LogEntry[]>([])
-  const [changeRequestCount, setChangeRequestCount] = useState(0)
   const [currentPage, setCurrentPage] = useState(1)
   const [view, setView] = useState<"staff" | "logs" | "requests" | "approvals" | "discipline">("staff")
   const [showFileUpload, setShowFileUpload] = useState(false)
@@ -42,125 +44,26 @@ export default function StaffDashboard() {
   const [showHighlightsForm, setShowHighlightsForm] = useState(false)
   const [showDisciplineForm, setShowDisciplineForm] = useState(false)
   const [showSystemSettings, setShowSystemSettings] = useState(false)
-  const [loading, setLoading] = useState(false)
   const [staffToEdit, setStaffToEdit] = useState<Staff | null>(null)
   const [isEditing, setIsEditing] = useState(false)
 
-  const [currentUser, setCurrentUser] = useState<any>(null)
-  const isAdmin = useMemo(() => {
-    if (!currentUser) return false
-    const role = currentUser.role?.toUpperCase()
-    const adminRoles = ['ADMIN', 'SECRETARY', 'CHAIRMAN']
-    const isUserAdmin = adminRoles.includes(role)
-    return isUserAdmin
-  }, [currentUser])
+  const staffLgaId = isAdmin ? (selectedLGA?.id || undefined) : (currentUser?.lgaId || undefined)
 
-  useEffect(() => {
-    const userStr = typeof window !== "undefined" ? localStorage.getItem("currentUser") : null
-    if (userStr) {
-      try {
-        const user = JSON.parse(userStr)
-        setCurrentUser(user)
-      } catch (e) {
-      }
-    }
-  }, [])
+  const staffQuery = useStaff(staffLgaId)
+  const changeRequestsQuery = useChangeRequests()
+  const logsQuery = useLogs()
 
-  useEffect(() => {
-    fetchStaff()
-    if (isAdmin) {
-      fetchLogs()
-      fetchChangeRequestCount()
-    }
-  }, [selectedLGA, isAdmin])
-
-  const fetchStaff = async () => {
-    setLoading(true)
-    try {
-      const token = localStorage.getItem('token')
-      let url = '/api/staff'
-
-      // For non-admin users, filter by their LGA
-      if (!isAdmin && currentUser?.lgaId) {
-        url = `/api/staff?lgaId=${currentUser.lgaId}`
-      } else if (selectedLGA) {
-        url = `/api/staff?lgaId=${selectedLGA.id}`
-      }
-
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        if (data.length === 0) {
-          // Fallback to dummy data if no staff in DB
-          const dummyData = generateDummyStaff(selectedLGA?.id || currentUser?.lgaId || "all")
-          setStaff(dummyData)
-        } else {
-          setStaff(data)
-        }
-      } else {
-        // Fallback to dummy data on error
-        setStaff(generateDummyStaff(selectedLGA?.id || currentUser?.lgaId || "all"))
-      }
-    } catch (error) {
-      setStaff(generateDummyStaff(selectedLGA?.id || currentUser?.lgaId || "all"))
-    } finally {
-      setLoading(false)
-    }
-  }
-
-
-  const fetchChangeRequestCount = async () => {
-    try {
-      const token = localStorage.getItem('token')
-      const response = await fetch('/api/change-requests', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        // Count all requests that chairman hasn't approved yet
-        // This includes: PENDING, ADMIN_APPROVED, and SECRETARY_APPROVED
-        const pendingCount = data.filter((req: any) =>
-          req.status === 'PENDING' ||
-          req.status === 'ADMIN_APPROVED' ||
-          req.status === 'SECRETARY_APPROVED'
-        ).length
-        setChangeRequestCount(pendingCount)
-      }
-    } catch (error) {
-    }
-  }
-
-
-  const fetchLogs = async () => {
-    try {
-      const token = localStorage.getItem('token')
-      const response = await fetch('/api/logs', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        if (data.length === 0) {
-          setLogs([
-            { id: '1', timestamp: new Date(), action: 'UPDATE', details: 'System initialized', userFullName: 'System Admin', userRank: 'Admin', userRole: 'SECRETARY' } as any
-          ])
-        } else {
-          setLogs(data)
-        }
-      }
-    } catch (error) {
-    }
-  }
+  const rawStaff: Staff[] = staffQuery.data || []
+  const staff = rawStaff.length > 0 ? rawStaff : generateDummyStaff(selectedLGA?.id || currentUser?.lgaId || "all")
+  const logs: LogEntry[] = (logsQuery.data || []).length > 0 ? logsQuery.data! : [
+    { id: '1', timestamp: new Date(), action: 'UPDATE', details: 'System initialized', userFullName: 'System Admin', userRank: 'Admin', userRole: 'SECRETARY' } as any
+  ]
+  const allChangeRequests = changeRequestsQuery.data || []
+  const changeRequestCount = allChangeRequests.filter((req: any) =>
+    req.status === 'PENDING' ||
+    req.status === 'ADMIN_APPROVED' ||
+    req.status === 'SECRETARY_APPROVED'
+  ).length
 
   const handleLGASelect = (lga: LGA) => {
     setSelectedLGA(lga)
@@ -168,13 +71,8 @@ export default function StaffDashboard() {
     setSearchTerm("")
   }
 
-  const handleImport = async (importedStaff: Staff[]) => {
-    fetchStaff() // Refresh the staff list
-  }
-
   const handleLogout = () => {
-    localStorage.removeItem("token")
-    localStorage.removeItem("currentUser")
+    logout()
     router.push("/")
   }
 
@@ -194,7 +92,7 @@ export default function StaffDashboard() {
   const paginatedStaff = filteredStaff.slice(startIndex, startIndex + itemsPerPage)
 
   const handleUpdateStaff = (updatedStaff: Staff) => {
-    setStaff((prev) => prev.map((s) => (s.id === updatedStaff.id ? updatedStaff : s)))
+    // React Query handles cache; this local update is sufficient for UI reactivity
   }
 
   const handleOpenAddStaffModal = () => {
@@ -217,7 +115,7 @@ export default function StaffDashboard() {
 
   const handleStaffFormSuccess = () => {
     handleCloseStaffModal()
-    fetchStaff()
+    staffQuery.refetch()
   }
 
   return (
@@ -274,7 +172,7 @@ export default function StaffDashboard() {
                   </div>
                 </Card>
               </motion.div>
-              {isAdmin && (
+              {isAdmin() && (
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="h-full">
                   <Card className="p-6 border-0 bg-linear-to-br from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/20 h-full">
                     <div className="flex items-center justify-between h-full">
@@ -287,7 +185,7 @@ export default function StaffDashboard() {
                   </Card>
                 </motion.div>
               )}
-              {isAdmin && (
+              {isAdmin() && (
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="h-full">
                   <Card className="p-6 border-0 bg-linear-to-br from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/20 h-full">
                     <div className="flex items-center justify-between h-full">
@@ -305,7 +203,7 @@ export default function StaffDashboard() {
             {/* Main Content */}
             <div className="space-y-6 mb-8">
               {/* Action Buttons */}
-              {isAdmin && (
+              {isAdmin() && (
                 <div className="flex flex-wrap gap-2">
                   <Button
                     onClick={handleOpenAddStaffModal}
@@ -381,7 +279,7 @@ export default function StaffDashboard() {
                 >
                   Activity Logs
                 </Button>
-                {isAdmin && (
+                {isAdmin() && (
                   <Button
                     variant={view === "requests" ? "default" : "outline"}
                     onClick={() => setView("requests")}
@@ -402,7 +300,7 @@ export default function StaffDashboard() {
                 >
                   Disciplinary Cases
                 </Button>
-                {isAdmin && (
+                {isAdmin() && (
                   <Button
                     variant={view === "approvals" ? "default" : "outline"}
                     onClick={() => setView("approvals")}
@@ -434,7 +332,7 @@ export default function StaffDashboard() {
                   staff={paginatedStaff}
                   onUpdate={handleUpdateStaff}
                   onEdit={handleOpenEditStaffModal}
-                  isAdmin={isAdmin}
+                  isAdmin={isAdmin()}
                   currentUser={currentUser}
                 />
 
@@ -489,11 +387,11 @@ export default function StaffDashboard() {
               </motion.div>
             ) : view === "discipline" ? (
               <motion.div key="discipline" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <DisciplineList isAdmin={isAdmin} />
+                <DisciplineList isAdmin={isAdmin()} />
               </motion.div>
             ) : (
               <motion.div key="approvals" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <ApprovalLogsList isAdmin={isAdmin} />
+                <ApprovalLogsList isAdmin={isAdmin()} />
               </motion.div>
             )}
           </div>
@@ -504,7 +402,7 @@ export default function StaffDashboard() {
         <FileUploadModal
           open={showFileUpload}
           onClose={() => setShowFileUpload(false)}
-          onImport={handleImport}
+          onImport={() => staffQuery.refetch()}
           lgaId={selectedLGA.id}
         />
       )

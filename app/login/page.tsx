@@ -7,49 +7,33 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card } from "@/components/ui/card"
 import { Eye, EyeOff } from "lucide-react"
+import { useLogin } from "@/hooks/use-auth"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { loginSchema } from "@/lib/validations"
+import type { z } from "zod"
+
+type LoginFormValues = z.infer<typeof loginSchema>
 
 export default function LoginPage() {
-  const [phoneNumber, setPhoneNumber] = useState("")
-  const [dateOfBirth, setDateOfBirth] = useState("")
   const [showPassword, setShowPassword] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState("")
   const router = useRouter()
+  const loginMutation = useLogin()
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError("")
+  const { register, handleSubmit, formState: { errors } } = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      phoneNumber: "",
+      dateOfBirth: "",
+    },
+  })
 
-    try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          phoneNumber,
-          dateOfBirth
-        })
-      })
-
-      const data = await response.json()
-
-      if (response.ok) {
-        // Store token and user data
-        localStorage.setItem('token', data.token)
-        localStorage.setItem('currentUser', JSON.stringify(data.user))
-
-        // Redirect to dashboard
-        router.push('/dashboard')
-      } else {
-        setError(data.error || "Couldn't sign you in. Please try again.")
-      }
-    } catch (err) {
-      setError("You appear to be offline. Please check your connection.")
-    } finally {
-      setLoading(false)
-    }
+  const onSubmit = (data: LoginFormValues) => {
+    loginMutation.mutate(data, {
+      onSuccess: () => {
+        router.push("/dashboard")
+      },
+    })
   }
 
   return (
@@ -60,17 +44,18 @@ export default function LoginPage() {
           <p className="text-muted-foreground">Enter your credentials to access the dashboard</p>
         </div>
 
-        <form onSubmit={handleLogin} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="phoneNumber">Phone Number (Username)</Label>
             <Input
               id="phoneNumber"
               type="tel"
-              value={phoneNumber}
-              onChange={(e) => setPhoneNumber(e.target.value)}
+              {...register("phoneNumber")}
               placeholder="08123456789"
-              required
             />
+            {errors.phoneNumber && (
+              <p className="text-sm text-destructive">{errors.phoneNumber.message}</p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -79,10 +64,8 @@ export default function LoginPage() {
               <Input
                 id="dateOfBirth"
                 type={showPassword ? "text" : "password"}
-                value={dateOfBirth}
-                onChange={(e) => setDateOfBirth(e.target.value)}
+                {...register("dateOfBirth")}
                 placeholder="MM/DD/YY or YYYY-MM-DD"
-                required
               />
               <button
                 type="button"
@@ -98,19 +81,22 @@ export default function LoginPage() {
                 )}
               </button>
             </div>
+            {errors.dateOfBirth && (
+              <p className="text-sm text-destructive">{errors.dateOfBirth.message}</p>
+            )}
             <p className="text-xs text-muted-foreground">Format: MM/DD/YY (e.g., 01/15/90) or YYYY-MM-DD</p>
           </div>
 
-          {error && (
-            <p className="text-sm text-destructive">{error}</p>
+          {loginMutation.error && (
+            <p className="text-sm text-destructive">{loginMutation.error.message}</p>
           )}
 
           <Button
             type="submit"
             className="w-full bg-linear-to-r from-primary to-accent"
-            disabled={loading}
+            disabled={loginMutation.isPending}
           >
-            {loading ? "Logging in..." : "Login"}
+            {loginMutation.isPending ? "Logging in..." : "Login"}
           </Button>
         </form>
 
@@ -124,4 +110,3 @@ export default function LoginPage() {
     </div>
   )
 }
-

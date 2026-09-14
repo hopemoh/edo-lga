@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import RichTextEditor from "@/components/ui/rich-text-editor"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { toast } from "sonner"
 import { Check, ChevronsUpDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
@@ -23,17 +22,15 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover"
+import { useStaff } from "@/hooks/use-staff"
+import { useSanctions } from "@/hooks/use-resources"
+import { useCreateDisciplinaryCase, useUpdateDisciplinaryCase } from "@/hooks/use-resources"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { disciplinaryCaseSchema } from "@/lib/validations"
+import type { z } from "zod"
 
-interface Staff {
-    id: string
-    name: string
-    lga?: { name: string }
-}
-
-interface Sanction {
-    id: string
-    name: string
-}
+type DisciplineFormValues = z.infer<typeof disciplinaryCaseSchema>
 
 interface DisciplineFormModalProps {
     open: boolean
@@ -43,108 +40,69 @@ interface DisciplineFormModalProps {
 }
 
 export default function DisciplineFormModal({ open, onClose, onSuccess, initialData }: DisciplineFormModalProps) {
-    const [loading, setLoading] = useState(false)
-    const [staff, setStaff] = useState<Staff[]>([])
     const [openStaff, setOpenStaff] = useState(false)
-    const [sanctions, setSanctions] = useState<Sanction[]>([])
-    const [formData, setFormData] = useState({
-        staffId: "",
-        title: "",
-        description: "",
-        status: "Pending",
-        sanction: ""
+
+    const { data: staff = [] } = useStaff()
+    const { data: sanctions = [] } = useSanctions()
+    const createCase = useCreateDisciplinaryCase()
+    const updateCase = useUpdateDisciplinaryCase()
+
+    const { register, handleSubmit, formState: { errors }, reset, setValue, watch } = useForm<DisciplineFormValues>({
+        resolver: zodResolver(disciplinaryCaseSchema),
+        defaultValues: {
+            staffId: "",
+            title: "",
+            description: "",
+            status: "Pending",
+            sanction: "",
+            dateReported: new Date().toISOString().split("T")[0],
+        },
     })
+
+    const selectedStaffId = watch("staffId")
 
     useEffect(() => {
         if (open) {
-            fetchStaff()
-            fetchSanctions()
             if (initialData) {
-                setFormData({
+                reset({
                     staffId: initialData.staffId,
                     title: initialData.title,
                     description: initialData.description,
                     status: initialData.status,
-                    sanction: initialData.sanction || ""
+                    sanction: initialData.sanction || "",
+                    dateReported: initialData.dateReported || new Date().toISOString().split("T")[0],
                 })
             } else {
-                setFormData({
+                reset({
                     staffId: "",
                     title: "",
                     description: "",
                     status: "Pending",
-                    sanction: ""
+                    sanction: "",
+                    dateReported: new Date().toISOString().split("T")[0],
                 })
             }
         }
-    }, [open, initialData])
+    }, [open, initialData, reset])
 
-    const fetchStaff = async () => {
-        try {
-            const token = localStorage.getItem('token')
-            const response = await fetch('/api/staff', {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
+    const onSubmit = (data: DisciplineFormValues) => {
+        const onSuccessHandler = () => {
+            onSuccess()
+            onClose()
+        }
+
+        if (initialData) {
+            updateCase.mutate({ id: initialData.id, data }, {
+                onSuccess: onSuccessHandler,
             })
-            if (response.ok) {
-                const data = await response.json()
-                setStaff(data)
-            }
-        } catch (error) {
+        } else {
+            createCase.mutate(data, {
+                onSuccess: onSuccessHandler,
+            })
         }
     }
 
-    const fetchSanctions = async () => {
-        try {
-            const token = localStorage.getItem('token')
-            const response = await fetch('/api/sanctions', {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            })
-            if (response.ok) {
-                const data = await response.json()
-                setSanctions(data)
-            }
-        } catch (error) {
-        }
-    }
-
-    const handleSubmit = async () => {
-        if (!formData.staffId || !formData.title || !formData.description) {
-            toast.error("Please fill in all required fields")
-            return
-        }
-
-        setLoading(true)
-        try {
-            const url = initialData ? `/api/disciplinary/${initialData.id}` : '/api/disciplinary'
-            const method = initialData ? 'PUT' : 'POST'
-
-            const token = localStorage.getItem('token')
-            const response = await fetch(url, {
-                method,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify(formData)
-            })
-
-            if (response.ok) {
-                toast.success(initialData ? "Disciplinary case updated" : "Disciplinary case added")
-                onSuccess()
-                onClose()
-            } else {
-                toast.error("Couldn't save your changes. Please try again.")
-            }
-        } catch (error) {
-            toast.error("You appear to be offline. Please check your connection.")
-        } finally {
-            setLoading(false)
-        }
-    }
+    const isSaving = createCase.isPending || updateCase.isPending
 
     return (
         <Dialog open={open} onOpenChange={onClose} modal={false}>
@@ -152,9 +110,10 @@ export default function DisciplineFormModal({ open, onClose, onSuccess, initialD
                 <DialogHeader>
                     <DialogTitle>{initialData ? "Edit Disciplinary Case" : "Add Disciplinary Case"}</DialogTitle>
                 </DialogHeader>
-                <div className="space-y-4 py-4">
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-4">
                     <div className="space-y-2">
                         <Label>Staff Member</Label>
+                        <input type="hidden" {...register("staffId")} />
                         <Popover open={openStaff} onOpenChange={setOpenStaff}>
                             <PopoverTrigger asChild>
                                 <Button
@@ -163,9 +122,10 @@ export default function DisciplineFormModal({ open, onClose, onSuccess, initialD
                                     aria-expanded={openStaff}
                                     className="w-full justify-between pointer-events-auto"
                                     disabled={!!initialData}
+                                    type="button"
                                 >
-                                    {formData.staffId
-                                        ? staff.find((s) => s.id === formData.staffId)?.name
+                                    {selectedStaffId
+                                        ? staff.find((s: any) => s.id === selectedStaffId)?.name
                                         : "Select staff member..."}
                                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                 </Button>
@@ -176,21 +136,21 @@ export default function DisciplineFormModal({ open, onClose, onSuccess, initialD
                                     <CommandList className="pointer-events-auto">
                                         <CommandEmpty>No staff found.</CommandEmpty>
                                         <CommandGroup className="pointer-events-auto">
-                                            {staff.map((s) => (
+                                            {staff.map((s: any) => (
                                                 <CommandItem
                                                     key={s.id}
                                                     value={s.id}
                                                     keywords={[s.name]}
                                                     className="pointer-events-auto cursor-pointer"
                                                     onSelect={(currentValue) => {
-                                                        setFormData(prev => ({ ...prev, staffId: currentValue }))
+                                                        setValue("staffId", currentValue)
                                                         setOpenStaff(false)
                                                     }}
                                                 >
                                                     <Check
                                                         className={cn(
                                                             "mr-2 h-4 w-4",
-                                                            formData.staffId === s.id ? "opacity-100" : "opacity-0"
+                                                            selectedStaffId === s.id ? "opacity-100" : "opacity-0"
                                                         )}
                                                     />
                                                     <div className="flex flex-col">
@@ -204,6 +164,9 @@ export default function DisciplineFormModal({ open, onClose, onSuccess, initialD
                                 </Command>
                             </PopoverContent>
                         </Popover>
+                        {errors.staffId && (
+                            <p className="text-sm text-destructive">{errors.staffId.message}</p>
+                        )}
                     </div>
 
                     <div className="space-y-2">
@@ -211,28 +174,33 @@ export default function DisciplineFormModal({ open, onClose, onSuccess, initialD
                         <Input
                             id="title"
                             placeholder="e.g. Unauthorized Absence"
-                            value={formData.title}
-                            onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                            {...register("title")}
                         />
+                        {errors.title && (
+                            <p className="text-sm text-destructive">{errors.title.message}</p>
+                        )}
                     </div>
 
                     <div className="space-y-2">
                         <Label htmlFor="description">Description</Label>
                         <div className="min-h-[150px]">
                             <RichTextEditor
-                                value={formData.description}
-                                onChange={(value) => setFormData(prev => ({ ...prev, description: value }))}
+                                value={watch("description") || ""}
+                                onChange={(value) => setValue("description", value)}
                                 placeholder="Provide details about the case..."
                             />
                         </div>
+                        {errors.description && (
+                            <p className="text-sm text-destructive">{errors.description.message}</p>
+                        )}
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="status">Status</Label>
                             <Select
-                                value={formData.status}
-                                onValueChange={(val) => setFormData(prev => ({ ...prev, status: val }))}
+                                value={watch("status")}
+                                onValueChange={(val) => setValue("status", val)}
                             >
                                 <SelectTrigger>
                                     <SelectValue placeholder="Select status" />
@@ -243,19 +211,22 @@ export default function DisciplineFormModal({ open, onClose, onSuccess, initialD
                                     <SelectItem value="Resolved">Resolved</SelectItem>
                                 </SelectContent>
                             </Select>
+                            {errors.status && (
+                                <p className="text-sm text-destructive">{errors.status.message}</p>
+                            )}
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="sanction">Sanction (Optional)</Label>
                             <Select
-                                value={formData.sanction}
-                                onValueChange={(val) => setFormData(prev => ({ ...prev, sanction: val }))}
+                                value={watch("sanction") || "none"}
+                                onValueChange={(val) => setValue("sanction", val === "none" ? "" : val)}
                             >
                                 <SelectTrigger>
                                     <SelectValue placeholder="Select sanction" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="none">None</SelectItem>
-                                    {sanctions.map((s) => (
+                                    {sanctions.map((s: any) => (
                                         <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
                                     ))}
                                 </SelectContent>
@@ -265,11 +236,11 @@ export default function DisciplineFormModal({ open, onClose, onSuccess, initialD
 
                     <DialogFooter className="pt-4">
                         <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-                        <Button type="button" disabled={loading} onClick={handleSubmit}>
-                            {loading ? (initialData ? "Updating..." : "Adding...") : (initialData ? "Update Case" : "Add Case")}
+                        <Button type="submit" disabled={isSaving}>
+                            {isSaving ? (initialData ? "Updating..." : "Adding...") : (initialData ? "Update Case" : "Add Case")}
                         </Button>
                     </DialogFooter>
-                </div>
+                </form>
             </DialogContent>
         </Dialog>
     )

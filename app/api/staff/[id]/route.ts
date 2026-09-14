@@ -9,9 +9,11 @@ import {
   auditLogs,
 } from "@/lib/db/schema";
 import { getTokenFromRequest, verifyToken } from "@/lib/auth";
+import { staffUpdateSchema } from "@/lib/validations";
+import { logError } from "@/lib/error-logger";
 
 function generateId(): string {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  return crypto.randomUUID();
 }
 
 export async function GET(
@@ -66,6 +68,14 @@ export async function GET(
 
     return NextResponse.json(transformed);
   } catch (error) {
+    await logError({
+      source: "api/staff/[id]",
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      request,
+      userId: user?.id,
+      userRole: user?.role,
+    });
     return NextResponse.json(
       { error: "Couldn't load staff records right now. Please try again." },
       { status: 500 }
@@ -94,6 +104,10 @@ export async function PUT(
     }
 
     const body = await request.json();
+    const parsed = staffUpdateSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    }
     const {
       name,
       sex,
@@ -112,7 +126,7 @@ export async function PUT(
       qualificationIds,
       certificationIds,
       changeRequestId,
-    } = body;
+    } = parsed.data;
 
     const existingStaff = await db.query.staff.findFirst({
       where: eq(staff.id, id),
@@ -214,6 +228,14 @@ export async function PUT(
 
     return NextResponse.json(updatedStaff);
   } catch (error) {
+    await logError({
+      source: "api/staff/[id]",
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      request,
+      userId: user?.id,
+      userRole: user?.role,
+    });
     return NextResponse.json(
       { error: "Couldn't save your changes. Please try again." },
       { status: 500 }

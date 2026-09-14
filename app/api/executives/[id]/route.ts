@@ -13,6 +13,7 @@ import {
   S3_FOLDERS,
   generateS3Key,
 } from "@/lib/s3";
+import { logError } from "@/lib/error-logger";
 
 export async function PUT(
   request: NextRequest,
@@ -88,6 +89,14 @@ export async function PUT(
 
     return NextResponse.json(updated);
   } catch (error) {
+    await logError({
+      source: "api/executives/[id]",
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      request,
+      userId: user?.id,
+      userRole: user?.role,
+    });
     return NextResponse.json(
       { error: "Couldn't save the executive. Please try again." },
       { status: 500 }
@@ -132,6 +141,14 @@ export async function DELETE(
 
     return NextResponse.json({ message: "Executive deleted" });
   } catch (error) {
+    await logError({
+      source: "api/executives/[id]",
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      request,
+      userId: user?.id,
+      userRole: user?.role,
+    });
     return NextResponse.json(
       { error: "Couldn't delete the executive. Please try again." },
       { status: 500 }

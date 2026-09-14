@@ -9,9 +9,10 @@ import {
 } from "@/lib/db/schema";
 import { getTokenFromRequest, verifyToken } from "@/lib/auth";
 import { parseExcelFile, parsePDFFile } from "@/lib/file-parser";
+import { logError } from "@/lib/error-logger";
 
 function generateId(): string {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  return crypto.randomUUID();
 }
 
 async function findOrCreateRank(rankName: string): Promise<string | null> {
@@ -211,6 +212,14 @@ export async function POST(request: NextRequest) {
                 status: "success",
               });
             } catch (err: any) {
+              await logError({
+                source: "api/staff/bulk",
+                message: err instanceof Error ? err.message : "Unknown error",
+                stack: err instanceof Error ? err.stack : undefined,
+                request,
+                userId: user?.id,
+                userRole: user?.role,
+              });
               failed++;
               sendEvent({
                 type: "progress",
@@ -243,6 +252,14 @@ export async function POST(request: NextRequest) {
 
           controller.close();
         } catch (error: any) {
+          await logError({
+            source: "api/staff/bulk",
+            message: error instanceof Error ? error.message : "Unknown error",
+            stack: error instanceof Error ? error.stack : undefined,
+            request,
+            userId: user?.id,
+            userRole: user?.role,
+          });
           sendEvent({ type: "error", message: error.message || "Import failed" });
           controller.close();
         }
@@ -256,6 +273,14 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
+    await logError({
+      source: "api/staff/bulk",
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      request,
+      userId: user?.id,
+      userRole: user?.role,
+    });
     return NextResponse.json(
       { error: "Something went wrong while saving. Please try again." },
       { status: 500 }

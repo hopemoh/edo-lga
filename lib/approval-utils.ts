@@ -95,6 +95,7 @@ export async function createApprovalLog(
   comments?: string
 ) {
   return db.insert(approvalLogs).values({
+    id: crypto.randomUUID(),
     changeRequestId,
     action,
     performedBy: context.userId,
@@ -112,6 +113,7 @@ export async function createAuditLog(
   staffId?: string
 ) {
   return db.insert(auditLogs).values({
+    id: crypto.randomUUID(),
     action,
     performedBy: context.userId,
     performedByFullName: context.userFullName,

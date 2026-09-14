@@ -3,12 +3,19 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { statuses } from "@/lib/db/schema";
 import { getTokenFromRequest, verifyToken } from "@/lib/auth";
+import { statusSchema } from "@/lib/validations";
+import { logError } from "@/lib/error-logger";
 
 export async function GET() {
   try {
     const allStatuses = await db.select().from(statuses);
     return NextResponse.json(allStatuses);
   } catch (error) {
+    await logError({
+      source: "api/status",
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     return NextResponse.json(
       { error: "Couldn't load statuses. Please try again." },
       { status: 500 }
@@ -29,14 +36,11 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name } = body;
-
-    if (!name) {
-      return NextResponse.json(
-        { error: "Name is required" },
-        { status: 400 }
-      );
+    const parsed = statusSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
     }
+    const { name } = parsed.data;
 
     const existing = await db.query.statuses.findFirst({
       where: eq(statuses.name, name),
@@ -57,6 +61,14 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(newStatus, { status: 201 });
   } catch (error) {
+    await logError({
+      source: "api/status",
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      request,
+      userId: user?.id,
+      userRole: user?.role,
+    });
     return NextResponse.json(
       { error: "Couldn't save the status. Please try again." },
       { status: 500 }

@@ -1,44 +1,16 @@
 "use client"
 
-import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { FileBarChart, Download, Calendar, Users, Award, ArrowUpRight, RefreshCw, GraduationCap } from "lucide-react"
 import RichTextDisplay from "@/components/ui/rich-text-display"
-
-interface SectionContent {
-    title: string
-    subtitle: string
-    content: string
-}
+import { useContent } from "@/hooks/use-resources"
 
 export default function AnnualReportSection() {
-    const [content, setContent] = useState<SectionContent>({
-        title: "2024 Annual Report",
-        subtitle: "Transparency & Accountability",
-        content: "The Local Government Service Commission publishes comprehensive annual reports detailing activities, achievements, and statistical data including Confirmations, Promotions, Conversions, Advancements, In-Service Training, Inter-Cadre Transfers, Exit from Service, and Disciplinary Cases."
-    })
-
-    useEffect(() => {
-        fetchContent()
-    }, [])
-
-    const fetchContent = async () => {
-        try {
-            const response = await fetch('/api/content')
-            if (response.ok) {
-                const data = await response.json()
-                const sectionData = data.find((item: SectionContent & { section: string }) => item.section === 'annual-report')
-                if (sectionData) {
-                    setContent({
-                        title: sectionData.title,
-                        subtitle: sectionData.subtitle || "Transparency & Accountability",
-                        content: sectionData.content
-                    })
-                }
-            }
-        } catch (error) {
-        }
-    }
+    const { data: contentData } = useContent()
+    const sectionData = contentData?.find((item: any) => item.section === 'annual-report')
+    const content = sectionData
+        ? { title: sectionData.title, subtitle: sectionData.subtitle || "Transparency & Accountability", content: sectionData.content }
+        : { title: "2024 Annual Report", subtitle: "Transparency & Accountability", content: "The Local Government Service Commission publishes comprehensive annual reports detailing activities, achievements, and statistical data including Confirmations, Promotions, Conversions, Advancements, In-Service Training, Inter-Cadre Transfers, Exit from Service, and Disciplinary Cases." }
 
     // Report categories from the 2024 Annual Report
     const reportCategories = [

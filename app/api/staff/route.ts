@@ -15,6 +15,8 @@ import {
   generateS3Key,
   S3_FOLDERS,
 } from "@/lib/s3";
+import { staffCreateSchema } from "@/lib/validations";
+import { logError } from "@/lib/error-logger";
 
 function generateId(): string {
   return crypto.randomUUID();
@@ -75,6 +77,14 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(transformed);
   } catch (error) {
+    await logError({
+      source: "api/staff",
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      request,
+      userId: user?.id,
+      userRole: user?.role,
+    });
     return NextResponse.json(
       { error: "Couldn't load staff records right now. Please try again." },
       { status: 500 }
@@ -121,6 +131,11 @@ export async function POST(request: NextRequest) {
       body = await request.json();
     }
 
+    const parsed = staffCreateSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    }
+
     const {
       lgaId,
       serialNumber,
@@ -139,14 +154,7 @@ export async function POST(request: NextRequest) {
       yearsExperience,
       rankId,
       qualificationIds = [],
-    } = body;
-
-    if (!lgaId || !serialNumber || !name || !sex || !statusId || !dateOfBirth || !dateOfFirstAppt || !phoneNumber) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 }
-      );
-    }
+    } = parsed.data;
 
     let documentUrl: string | null = null;
     if (documentFile) {
@@ -220,6 +228,14 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(newStaff, { status: 201 });
   } catch (error) {
+    await logError({
+      source: "api/staff",
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      request,
+      userId: user?.id,
+      userRole: user?.role,
+    });
     return NextResponse.json(
       { error: "Something went wrong while saving. Please try again." },
       { status: 500 }

@@ -1,141 +1,92 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { SignedImage } from "@/components/ui/signed-image"
-import { Plus, Trash2, Edit2, Save, X } from "lucide-react"
+import { Plus, Trash2, Edit2, X } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
+import { useExecutives, useHighlights, useCreateExecutive, useUpdateExecutive, useDeleteExecutive, useCreateHighlight, useUpdateHighlight, useDeleteHighlight } from "@/hooks/use-resources"
 
 interface HighlightsFormModalProps {
     open: boolean
     onClose: () => void
 }
 
-interface Executive {
-    id: string
-    name: string
-    role: string
-    image: string | null
-    order: number
-}
-
-interface Highlight {
-    id: string
-    type: 'CONFIRMATION' | 'CONVERSION' | 'PROMOTION'
-    title: string
-    subtitle: string
-    description: string
-    order: number
-}
-
 export default function HighlightsFormModal({ open, onClose }: HighlightsFormModalProps) {
     const [activeTab, setActiveTab] = useState("executives")
-    const [executives, setExecutives] = useState<Executive[]>([])
-    const [highlights, setHighlights] = useState<Highlight[]>([])
-    const [loading, setLoading] = useState(false)
     const [editingId, setEditingId] = useState<string | null>(null)
-
-    // Form states
     const [formData, setFormData] = useState<any>({})
 
-    useEffect(() => {
-        if (open) {
-            fetchData()
-        }
-    }, [open, activeTab])
+    const { data: executives = [] } = useExecutives()
+    const { data: highlights = [] } = useHighlights(activeTab !== "executives" ? activeTab.toUpperCase() : undefined)
 
-    const fetchData = async () => {
-        setLoading(true)
-        try {
-            if (activeTab === "executives") {
-                const res = await fetch('/api/executives')
-                if (res.ok) setExecutives(await res.json())
-            } else {
-                const type = activeTab.toUpperCase()
-                const res = await fetch(`/api/highlights?type=${type}`)
-                if (res.ok) setHighlights(await res.json())
-            }
-        } catch (error) {
-        } finally {
-            setLoading(false)
-        }
-    }
+    const createExecutive = useCreateExecutive()
+    const updateExecutive = useUpdateExecutive()
+    const deleteExecutive = useDeleteExecutive()
+    const createHighlight = useCreateHighlight()
+    const updateHighlight = useUpdateHighlight()
+    const deleteHighlight = useDeleteHighlight()
 
-    const handleSave = async (e: React.FormEvent) => {
+    const isSaving = createExecutive.isPending || updateExecutive.isPending || createHighlight.isPending || updateHighlight.isPending
+
+    const handleSave = (e: React.FormEvent) => {
         e.preventDefault()
-        setLoading(true)
+        const isExecutive = activeTab === "executives"
 
-        try {
-            const isExecutive = activeTab === "executives"
-            const endpoint = isExecutive ? '/api/executives' : '/api/highlights'
-            const method = editingId ? 'PUT' : 'POST'
-            const url = editingId ? `${endpoint}/${editingId}` : endpoint
+        const formDataToSend = new FormData()
 
-            const formDataToSend = new FormData()
+        if (isExecutive) {
+            formDataToSend.append('name', formData.name || '')
+            formDataToSend.append('role', formData.role || '')
+        } else {
+            formDataToSend.append('type', activeTab.toUpperCase())
+            formDataToSend.append('title', formData.title || '')
+            formDataToSend.append('subtitle', formData.subtitle || '')
+            formDataToSend.append('description', formData.description || '')
+        }
 
-            if (isExecutive) {
-                formDataToSend.append('name', formData.name || '')
-                formDataToSend.append('role', formData.role || '')
+        formDataToSend.append('order', (formData.order || 0).toString())
+
+        if (formData.imageFile && activeTab !== 'promotion') {
+            formDataToSend.append('image', formData.imageFile)
+        }
+
+        const onSuccess = () => {
+            setEditingId(null)
+            setFormData({})
+        }
+
+        if (isExecutive) {
+            if (editingId) {
+                updateExecutive.mutate({ id: editingId, data: formDataToSend }, { onSuccess })
             } else {
-                formDataToSend.append('type', activeTab.toUpperCase())
-                formDataToSend.append('title', formData.title || '')
-                formDataToSend.append('subtitle', formData.subtitle || '')
-                formDataToSend.append('description', formData.description || '')
+                createExecutive.mutate(formDataToSend, { onSuccess })
             }
-
-            formDataToSend.append('order', (formData.order || 0).toString())
-
-            // Only include image uploads for executives or non-promotion highlights
-            if (formData.imageFile && activeTab !== 'promotion') {
-                formDataToSend.append('image', formData.imageFile)
+        } else {
+            if (editingId) {
+                updateHighlight.mutate({ id: editingId, data: formDataToSend }, { onSuccess })
+            } else {
+                createHighlight.mutate(formDataToSend, { onSuccess })
             }
-
-            const token = localStorage.getItem('token')
-            const res = await fetch(url, {
-                method,
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
-                body: formDataToSend
-            })
-
-            if (res.ok) {
-                setEditingId(null)
-                setFormData({})
-                fetchData()
-            }
-        } catch (error) {
-        } finally {
-            setLoading(false)
         }
     }
 
-    const handleDelete = async (id: string) => {
+    const handleDelete = (id: string) => {
         if (!confirm("Are you sure you want to delete this item?")) return
 
-        try {
-            const token = localStorage.getItem('token')
-            const endpoint = activeTab === "executives" ? `/api/executives/${id}` : `/api/highlights/${id}`
-            const response = await fetch(endpoint, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
+        const isExecutive = activeTab === "executives"
+        if (isExecutive) {
+            deleteExecutive.mutate(id, {
+                onError: () => alert("Couldn't save your changes. Please try again.")
             })
-
-            if (!response.ok) {
-                const errorData = await response.json()
-                alert(errorData.error || "Couldn't save your changes. Please try again.")
-                return
-            }
-
-            fetchData()
-        } catch (error) {
-            alert("Couldn't save your changes. Please try again.")
+        } else {
+            deleteHighlight.mutate(id, {
+                onError: () => alert("Couldn't save your changes. Please try again.")
+            })
         }
     }
 
@@ -161,7 +112,6 @@ export default function HighlightsFormModal({ open, onClose }: HighlightsFormMod
                     <Input
                         value={formData.title || formData.name || ''}
                         onChange={e => setFormData({ ...formData, [activeTab === 'executives' ? 'name' : 'title']: e.target.value })}
-                        required
                     />
                 </div>
                 <div className="space-y-2">
@@ -169,7 +119,6 @@ export default function HighlightsFormModal({ open, onClose }: HighlightsFormMod
                     <Input
                         value={formData.subtitle || formData.role || ''}
                         onChange={e => setFormData({ ...formData, [activeTab === 'executives' ? 'role' : 'subtitle']: e.target.value })}
-                        required
                     />
                 </div>
                 {activeTab !== 'executives' && (
@@ -215,8 +164,8 @@ export default function HighlightsFormModal({ open, onClose }: HighlightsFormMod
                 </div>
             </div>
 
-            <Button type="submit" disabled={loading} className="w-full">
-                {loading ? "Saving..." : "Save Item"}
+            <Button type="submit" disabled={isSaving} className="w-full">
+                {isSaving ? "Saving..." : "Save Item"}
             </Button>
         </form>
     )

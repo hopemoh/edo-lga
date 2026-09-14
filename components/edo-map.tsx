@@ -1,9 +1,10 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { motion } from "framer-motion"
 import { MapPin, Landmark, Activity, ChevronRight, Search } from "lucide-react"
 import RichTextDisplay from "@/components/ui/rich-text-display"
+import { useLGAs } from "@/hooks/use-lgas"
 
 interface LGA {
   id: string
@@ -22,35 +23,20 @@ interface EdoMapProps {
 
 export default function EdoMap({ onLGASelect }: EdoMapProps) {
   const [searchTerm, setSearchTerm] = useState("")
-  const [lgaData, setLgaData] = useState<LGA[]>([])
-  const [loading, setLoading] = useState(true)
+  const { data: rawData, isLoading: loading } = useLGAs()
 
-  useEffect(() => {
-    fetchLGAs()
-  }, [])
-
-  const fetchLGAs = async () => {
-    try {
-      const response = await fetch('/api/lgas')
-      if (response.ok) {
-        const data = await response.json()
-        const formattedData = data.map((lga: any) => ({
-          id: lga.id,
-          name: lga.name,
-          description: lga.details?.description || '',
-          landmarks: lga.details?.landmarks || [],
-          activities: lga.details?.activities || [],
-          image: lga.details?.image || '/placeholder.jpg',
-          mapX: lga.details?.mapX || 0,
-          mapY: lga.details?.mapY || 0
-        }))
-        setLgaData(formattedData)
-      }
-    } catch (error) {
-    } finally {
-      setLoading(false)
-    }
-  }
+  const lgaData: LGA[] = rawData
+    ? rawData.map((lga: any) => ({
+        id: lga.id,
+        name: lga.name,
+        description: lga.details?.description || '',
+        landmarks: lga.details?.landmarks || [],
+        activities: lga.details?.activities || [],
+        image: lga.details?.image || '/placeholder.jpg',
+        mapX: lga.details?.mapX || 0,
+        mapY: lga.details?.mapY || 0
+      }))
+    : []
 
   const handleLGASelect = (lga: LGA) => {
     onLGASelect(lga)

@@ -11,7 +11,15 @@ import { Badge } from "@/components/ui/badge"
 import { AlertCircle, Lock } from "lucide-react"
 import { motion } from "framer-motion"
 import type { Staff } from "@/lib/types"
+import { useLGAs } from "@/hooks/use-lgas"
+import { useStatuses, useRanks, useQualifications } from "@/hooks/use-resources"
+import { useCreateStaff, useUpdateStaff } from "@/hooks/use-staff"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { staffCreateSchema } from "@/lib/validations"
+import type { z } from "zod"
 
+type StaffFormValues = z.infer<typeof staffCreateSchema>
 type Role = "STAFF" | "ADMIN" | "SECRETARY" | "CHAIRMAN"
 
 interface StaffFormModalProps {
@@ -24,21 +32,6 @@ interface StaffFormModalProps {
   currentUserRole?: Role
 }
 
-interface LGA {
-  id: string
-  name: string
-}
-
-interface Status {
-  id: string
-  name: string
-}
-
-interface Rank {
-  id: string
-  name: string
-}
-
 interface ChangeRequest {
   id: string
   selectedFields: string[]
@@ -49,48 +42,7 @@ interface ChangeRequest {
   status: string
 }
 
-const ROLES: Role[] = ["STAFF", "ADMIN", "SECRETARY", "CHAIRMAN"]
-
-interface FormData {
-  name: string
-  sex: string
-  lgaId: string
-  statusId: string
-  rankId: string
-  sgl: string
-  dateOfBirth: string
-  dateOfFirstAppt: string
-  dateOfConf: string
-  dateOfPresentAppt: string
-  phoneNumber: string
-  recommendedRetirementDate: string
-  remark: string
-  role: Role
-  [key: string]: any
-}
-
 export default function StaffFormModal({ open, onClose, onSuccess, lgaId: initialLgaId, staffToEdit, isEditing, currentUserRole }: StaffFormModalProps) {
-  const [formData, setFormData] = useState<FormData>({
-    name: "",
-    sex: "M",
-    lgaId: initialLgaId || "",
-    statusId: "",
-    rankId: "",
-    sgl: "",
-    dateOfBirth: "",
-    dateOfFirstAppt: "",
-    dateOfConf: "",
-    dateOfPresentAppt: "",
-    phoneNumber: "",
-    recommendedRetirementDate: "",
-    remark: "",
-    role: "STAFF" as Role
-  })
-
-  const [lgas, setLgas] = useState<LGA[]>([])
-  const [statuses, setStatuses] = useState<Status[]>([])
-  const [ranks, setRanks] = useState<Rank[]>([])
-  const [qualifications, setQualifications] = useState<any[]>([])
   const [selectedQualifications, setSelectedQualifications] = useState<string[]>([])
   const [file, setFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
@@ -98,72 +50,82 @@ export default function StaffFormModal({ open, onClose, onSuccess, lgaId: initia
   const [approvedChangeRequest, setApprovedChangeRequest] = useState<ChangeRequest | null>(null)
   const [hasApprovedRequest, setHasApprovedRequest] = useState(false)
 
+  const { data: lgas = [] } = useLGAs()
+  const { data: statuses = [] } = useStatuses()
+  const { data: ranks = [] } = useRanks()
+  const { data: qualifications = [] } = useQualifications()
+  const createMutation = useCreateStaff()
+  const updateMutation = useUpdateStaff()
+
+  const { register, handleSubmit, formState: { errors }, reset, setValue, watch } = useForm<StaffFormValues>({
+    resolver: zodResolver(staffCreateSchema),
+    defaultValues: {
+      name: "",
+      sex: "M",
+      lgaId: initialLgaId || "",
+      statusId: "",
+      phoneNumber: "",
+      sgl: 1,
+      dateOfBirth: "",
+      dateOfFirstAppt: "",
+      dateOfConf: "",
+      dateOfPresentAppt: "",
+    },
+  })
+
   const isAdmin = currentUserRole && ['ADMIN', 'SECRETARY', 'CHAIRMAN'].includes(currentUserRole)
 
-  // Get editable fields from approved change request
   const editableFields = approvedChangeRequest?.selectedFields || []
 
-  // Check if a field is editable based on approved change request
   const isFieldEditable = (fieldName: string) => {
-    if (!isEditing || !staffToEdit) return true // For new staff creation, all fields are editable
-    if (!hasApprovedRequest) return false // If no approved request, no fields are editable
+    if (!isEditing || !staffToEdit) return true
+    if (!hasApprovedRequest) return false
     return editableFields.includes(fieldName)
   }
 
-  // Check if form should be disabled (no approved change request for editing)
   const isFormDisabled = Boolean(isEditing && staffToEdit && !hasApprovedRequest)
 
   useEffect(() => {
     if (open) {
-      fetchLgas()
-      fetchStatuses()
-      fetchRanks()
-      fetchQualifications()
-
-      // Check for approved change requests if editing
       if (isEditing && staffToEdit) {
         fetchApprovedChangeRequest()
       } else {
-        setHasApprovedRequest(true) // For new staff creation
+        setHasApprovedRequest(true)
       }
 
       if (isEditing && staffToEdit) {
-        setFormData({
+        const defaultVals = {
           name: staffToEdit.name || "",
-          sex: staffToEdit.sex || "M",
+          sex: (staffToEdit.sex || "M") as "M" | "F",
           lgaId: staffToEdit.lga?.id || staffToEdit.lgaId || "",
           statusId: typeof staffToEdit.status === 'object' ? (staffToEdit.status as any).id : "",
-          rankId: staffToEdit.rank && typeof staffToEdit.rank === 'object' ? (staffToEdit.rank as any).id : "",
-          sgl: staffToEdit.sgl?.toString() || "",
+          phoneNumber: staffToEdit.phoneNumber || "",
+          sgl: staffToEdit.sgl || 1,
           dateOfBirth: staffToEdit.dateOfBirth ? new Date(staffToEdit.dateOfBirth).toISOString().split('T')[0] : "",
           dateOfFirstAppt: staffToEdit.dateOfFirstAppt ? new Date(staffToEdit.dateOfFirstAppt).toISOString().split('T')[0] : "",
           dateOfConf: staffToEdit.dateOfConf ? new Date(staffToEdit.dateOfConf).toISOString().split('T')[0] : "",
           dateOfPresentAppt: staffToEdit.dateOfPresentAppt ? new Date(staffToEdit.dateOfPresentAppt).toISOString().split('T')[0] : "",
-          phoneNumber: staffToEdit.phoneNumber || "",
           recommendedRetirementDate: staffToEdit.recommendedRetirementDate ? new Date(staffToEdit.recommendedRetirementDate).toISOString().split('T')[0] : "",
           remark: staffToEdit.remark || "",
-          role: staffToEdit.role || "STAFF"
-        })
-        // Set current qualifications if not overridden by change request
+        }
+        reset(defaultVals)
         if (!approvedChangeRequest?.selectedFields.includes('qualifications')) {
           setSelectedQualifications((staffToEdit.qualifications as any[])?.map((q: any) => q.qualificationId || q.id) || [])
         }
       } else {
-        setFormData({
+        reset({
           name: "",
           sex: "M",
           lgaId: initialLgaId || "",
           statusId: "",
-          rankId: "",
-          sgl: "",
+          phoneNumber: "",
+          sgl: 1,
           dateOfBirth: "",
           dateOfFirstAppt: "",
           dateOfConf: "",
           dateOfPresentAppt: "",
-          phoneNumber: "",
           recommendedRetirementDate: "",
           remark: "",
-          role: "STAFF"
         })
         setSelectedQualifications([])
       }
@@ -185,7 +147,6 @@ export default function StaffFormModal({ open, onClose, onSuccess, lgaId: initia
           setApprovedChangeRequest(approvedRequest)
           setHasApprovedRequest(true)
 
-          // If qualifications field is approved, set the new qualifications from the request
           if (approvedRequest.selectedFields.includes('qualifications') && approvedRequest.changes.qualifications) {
             setSelectedQualifications(approvedRequest.changes.qualifications)
           }
@@ -199,99 +160,49 @@ export default function StaffFormModal({ open, onClose, onSuccess, lgaId: initia
     }
   }
 
-  const fetchLgas = async () => {
-    try {
-      const response = await fetch('/api/lgas')
-      if (response.ok) {
-        const data = await response.json()
-        setLgas(data)
-      }
-    } catch (err) {
-    }
-  }
-
-  const fetchStatuses = async () => {
-    try {
-      const response = await fetch('/api/status')
-      if (response.ok) {
-        const data = await response.json()
-        setStatuses(data)
-      }
-    } catch (err) {
-    }
-  }
-
-  const fetchRanks = async () => {
-    try {
-      const response = await fetch('/api/ranks')
-      if (response.ok) {
-        const data = await response.json()
-        setRanks(data)
-      }
-    } catch (err) {
-    }
-  }
-
-  const fetchQualifications = async () => {
-    try {
-      const response = await fetch('/api/qualifications')
-      if (response.ok) {
-        const data = await response.json()
-        setQualifications(data)
-      }
-    } catch (err) {
-    }
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const onSubmit = (data: StaffFormValues) => {
     setLoading(true)
     setError("")
 
     try {
-      const token = localStorage.getItem('token')
-
       if (isEditing && staffToEdit) {
-        // For editing, only send fields that are editable based on approved change request
-        let updateData: any = { ...formData }
+        let updateData: any = { ...data }
         if (approvedChangeRequest) {
           updateData = {}
           editableFields.forEach(field => {
             if (field === 'status') {
-              updateData.statusId = formData.statusId
+              updateData.statusId = data.statusId
             } else if (field === 'rank') {
-              updateData.rankId = formData.rankId
+              updateData.rankId = (data as any).rankId
             } else {
-              updateData[field] = formData[field]
+              updateData[field] = (data as any)[field]
             }
           })
         }
 
-        const response = await fetch(`/api/staff/${staffToEdit.id}`, {
-          method: 'PUT',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
+        updateMutation.mutate(
+          {
+            id: staffToEdit.id,
+            data: {
+              ...updateData,
+              qualificationIds: isFieldEditable('qualifications') ? selectedQualifications : undefined,
+              changeRequestId: approvedChangeRequest?.id
+            }
           },
-          body: JSON.stringify({
-            ...updateData,
-            qualificationIds: isFieldEditable('qualifications') ? selectedQualifications : undefined,
-            changeRequestId: approvedChangeRequest?.id // Mark change request as completed
-          })
-        })
-
-        if (response.ok) {
-          onSuccess()
-          onClose()
-        } else {
-          const data = await response.json()
-          setError(data.error || "Couldn't save your changes. Please try again.")
-        }
+          {
+            onSuccess: () => {
+              onSuccess()
+              onClose()
+            },
+            onError: (err: any) => {
+              setError(err.message || "Couldn't save your changes. Please try again.")
+            },
+          }
+        )
       } else {
-        // Create logic remains the same for new staff
         const formDataWithFile = new FormData()
-        for (const key in formData) {
-          formDataWithFile.append(key, (formData as any)[key])
+        for (const key in data) {
+          formDataWithFile.append(key, (data as any)[key])
         }
         selectedQualifications.forEach(qId => {
           formDataWithFile.append('qualificationIds[]', qId)
@@ -300,31 +211,21 @@ export default function StaffFormModal({ open, onClose, onSuccess, lgaId: initia
           formDataWithFile.append('file', file)
         }
 
-        const response = await fetch('/api/staff', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`
+        createMutation.mutate(formDataWithFile as any, {
+          onSuccess: () => {
+            onSuccess()
+            onClose()
           },
-          body: formDataWithFile
+          onError: (err: any) => {
+            setError(err.message || "Couldn't save your changes. Please try again.")
+          },
         })
-
-        if (response.ok) {
-          onSuccess()
-          onClose()
-        } else {
-          const data = await response.json()
-          setError(data.error || "Couldn't save your changes. Please try again.")
-        }
       }
     } catch (err) {
       setError("You appear to be offline. Please check your connection.")
     } finally {
       setLoading(false)
     }
-  }
-
-  const updateField = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
   }
 
   const renderField = (
@@ -336,6 +237,7 @@ export default function StaffFormModal({ open, onClose, onSuccess, lgaId: initia
   ) => {
     const editable = isFieldEditable(fieldName)
     const isHighlighted = isEditing && editable && hasApprovedRequest
+    const fieldError = (errors as any)[fieldName]
 
     return (
       <div className={`space-y-2 ${isHighlighted ? 'p-3 bg-blue-50 border border-blue-200 rounded-lg' : ''}`}>
@@ -348,10 +250,8 @@ export default function StaffFormModal({ open, onClose, onSuccess, lgaId: initia
         {type === 'text' && (
           <Input
             id={fieldName}
-            value={formData[fieldName] || ''}
-            onChange={(e) => updateField(fieldName, e.target.value)}
+            {...register(fieldName as any, { required: required && editable ? `${label} is required` : false })}
             disabled={!editable}
-            required={required && editable}
             className={!editable ? 'bg-muted cursor-not-allowed' : ''}
           />
         )}
@@ -360,10 +260,8 @@ export default function StaffFormModal({ open, onClose, onSuccess, lgaId: initia
           <Input
             id={fieldName}
             type="number"
-            value={formData[fieldName] || ''}
-            onChange={(e) => updateField(fieldName, e.target.value)}
+            {...register(fieldName as any, { valueAsNumber: true })}
             disabled={!editable}
-            required={required && editable}
             className={!editable ? 'bg-muted cursor-not-allowed' : ''}
           />
         )}
@@ -372,20 +270,17 @@ export default function StaffFormModal({ open, onClose, onSuccess, lgaId: initia
           <Input
             id={fieldName}
             type="date"
-            value={formData[fieldName] || ''}
-            onChange={(e) => updateField(fieldName, e.target.value)}
+            {...register(fieldName as any)}
             disabled={!editable}
-            required={required && editable}
             className={!editable ? 'bg-muted cursor-not-allowed' : ''}
           />
         )}
 
         {type === 'select' && (
           <Select
-            value={formData[fieldName]}
-            onValueChange={(value) => updateField(fieldName, value)}
+            value={watch(fieldName as any) || ""}
+            onValueChange={(value) => setValue(fieldName as any, value)}
             disabled={!editable}
-            required={required && editable}
           >
             <SelectTrigger className={!editable ? 'bg-muted cursor-not-allowed' : ''}>
               <SelectValue placeholder={`Select ${label.toLowerCase()}`} />
@@ -403,13 +298,15 @@ export default function StaffFormModal({ open, onClose, onSuccess, lgaId: initia
         {type === 'textarea' && (
           <Textarea
             id={fieldName}
-            value={formData[fieldName] || ''}
-            onChange={(e) => updateField(fieldName, e.target.value)}
+            {...register(fieldName as any)}
             disabled={!editable}
-            required={required && editable}
             className={!editable ? 'bg-muted cursor-not-allowed' : ''}
             rows={3}
           />
+        )}
+
+        {fieldError && (
+          <p className="text-sm text-destructive">{fieldError.message}</p>
         )}
       </div>
     )
@@ -461,7 +358,7 @@ export default function StaffFormModal({ open, onClose, onSuccess, lgaId: initia
         <motion.form
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          onSubmit={handleSubmit}
+          onSubmit={handleSubmit(onSubmit)}
           className="space-y-6 antialiased"
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -481,13 +378,9 @@ export default function StaffFormModal({ open, onClose, onSuccess, lgaId: initia
             <div className="space-y-4">
               <h3 className="font-semibold text-lg">Employment Details</h3>
               {renderField('statusId', 'Status', 'select',
-                statuses.map(s => ({ value: s.id, label: s.name })), true
-              )}
-              {renderField('rankId', 'Rank', 'select',
-                ranks.map(r => ({ value: r.id, label: r.name }))
+                statuses.map((s: any) => ({ value: s.id, label: s.name })), true
               )}
               {renderField('sgl', 'SGL', 'number', undefined, true)}
-              {/* Role is now forced to STAFF on creation and managed separately by Chairman */}
             </div>
           </div>
 
@@ -495,7 +388,7 @@ export default function StaffFormModal({ open, onClose, onSuccess, lgaId: initia
           <div className="space-y-4">
             <h3 className="font-semibold text-lg">Location</h3>
             {renderField('lgaId', 'LGA of Origin', 'select',
-              lgas.map(lga => ({ value: lga.id, label: lga.name })), true
+              lgas.map((lga: any) => ({ value: lga.id, label: lga.name })), true
             )}
           </div>
 
@@ -522,7 +415,7 @@ export default function StaffFormModal({ open, onClose, onSuccess, lgaId: initia
                   <Badge variant="secondary" className="text-xs">Editable</Badge>
                 </Label>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                  {qualifications.map((qual) => (
+                  {qualifications.map((qual: any) => (
                     <label key={qual.id} className="flex items-center space-x-2 text-sm">
                       <input
                         type="checkbox"
@@ -549,7 +442,7 @@ export default function StaffFormModal({ open, onClose, onSuccess, lgaId: initia
             <div className="space-y-4">
               <h3 className="font-semibold text-lg">Qualifications</h3>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                {qualifications.map((qual) => (
+                {qualifications.map((qual: any) => (
                   <label key={qual.id} className="flex items-center space-x-2 text-sm">
                     <input
                       type="checkbox"

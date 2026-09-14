@@ -69,7 +69,6 @@ export default function RankFormModal({ open, onClose, onSuccess }: RankFormModa
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g., Grade 12, DFA, CAO"
-              required
             />
           </div>
 

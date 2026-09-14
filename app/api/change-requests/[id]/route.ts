@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { changeRequests } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { getTokenFromRequest, verifyToken } from "@/lib/auth";
+import { logError } from "@/lib/error-logger";
 
 export async function GET(
   request: NextRequest,
@@ -38,6 +39,14 @@ export async function GET(
 
     return NextResponse.json(changeRequest);
   } catch (error) {
+    await logError({
+      source: "api/change-requests/[id]",
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      request,
+      userId: user?.id,
+      userRole: user?.role,
+    });
     return NextResponse.json(
       { error: "Couldn't load the change request. Please try again." },
       { status: 500 }

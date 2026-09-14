@@ -1,34 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { SignedImage } from "@/components/ui/signed-image"
 import { User } from "lucide-react"
-
-interface Executive {
-    id: string
-    name: string
-    role: string
-    image: string | null
-}
+import { useExecutives } from "@/hooks/use-resources"
 
 export default function ExecutivesSection() {
-    const [executives, setExecutives] = useState<Executive[]>([])
-
-    useEffect(() => {
-        fetchExecutives()
-    }, [])
-
-    const fetchExecutives = async () => {
-        try {
-            const response = await fetch('/api/executives')
-            if (response.ok) {
-                const data = await response.json()
-                setExecutives(data)
-            }
-        } catch (error) {
-        }
-    }
+    const { data: executives } = useExecutives()
 
     return (
         <section className="py-16 px-4 md:px-8 lg:px-12 bg-white">
@@ -52,7 +30,7 @@ export default function ExecutivesSection() {
                 </motion.div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 justify-center">
-                    {executives.map((exec, index) => (
+                    {(executives || []).map((exec: any, index: number) => (
                         <motion.div
                             key={exec.id}
                             initial={{ opacity: 0, y: 20 }}

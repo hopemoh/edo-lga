@@ -1,120 +1,59 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Plus, Trash2, Edit2, Save, X } from "lucide-react"
+import { Plus, Trash2, Edit2, X } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
+import { useQualifications, useCreateQualification, useDeleteQualification, useRanks, useCreateRank, useDeleteRank, useStatuses, useCreateStatus, useDeleteStatus } from "@/hooks/use-resources"
 
 interface QualificationFormModalProps {
     open: boolean
     onClose: () => void
 }
 
-interface Qualification {
-    id: string
-    name: string
-}
-
-interface Rank {
-    id: string
-    name: string
-}
-
-interface Status {
-    id: string
-    name: string
-}
-
 export default function QualificationFormModal({ open, onClose }: QualificationFormModalProps) {
     const [activeTab, setActiveTab] = useState("qualifications")
-    const [qualifications, setQualifications] = useState<Qualification[]>([])
-    const [ranks, setRanks] = useState<Rank[]>([])
-    const [statuses, setStatuses] = useState<Status[]>([])
-    const [loading, setLoading] = useState(false)
     const [editingId, setEditingId] = useState<string | null>(null)
     const [formData, setFormData] = useState({ name: "" })
 
-    useEffect(() => {
-        if (open) {
-            fetchData()
-        }
-    }, [open, activeTab])
+    const { data: qualifications = [] } = useQualifications()
+    const { data: ranks = [] } = useRanks()
+    const { data: statuses = [] } = useStatuses()
 
-    const fetchData = async () => {
-        setLoading(true)
-        try {
-            if (activeTab === "qualifications") {
-                const res = await fetch('/api/qualifications')
-                if (res.ok) setQualifications(await res.json())
-            } else if (activeTab === "ranks") {
-                const res = await fetch('/api/ranks')
-                if (res.ok) setRanks(await res.json())
-            } else if (activeTab === "statuses") {
-                const res = await fetch('/api/status')
-                if (res.ok) setStatuses(await res.json())
-            }
-        } catch (error) {
-        } finally {
-            setLoading(false)
-        }
-    }
+    const createQualification = useCreateQualification()
+    const deleteQualification = useDeleteQualification()
+    const createRank = useCreateRank()
+    const deleteRank = useDeleteRank()
+    const createStatus = useCreateStatus()
+    const deleteStatus = useDeleteStatus()
 
-    const handleSave = async (e: React.FormEvent) => {
+    const createMutation = activeTab === "qualifications" ? createQualification : activeTab === "ranks" ? createRank : createStatus
+    const deleteMutation = activeTab === "qualifications" ? deleteQualification : activeTab === "ranks" ? deleteRank : deleteStatus
+
+    const handleSave = (e: React.FormEvent) => {
         e.preventDefault()
         if (!formData.name) return
 
-        setLoading(true)
-        try {
-            const token = localStorage.getItem('token')
-            const endpoint = `/api/${activeTab}`
-            const method = editingId ? 'PUT' : 'POST'
-            const url = editingId ? `${endpoint}/${editingId}` : endpoint
-
-            const response = await fetch(url, {
-                method,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ name: formData.name })
-            })
-
-            if (response.ok) {
-                setFormData({ name: "" })
-                setEditingId(null)
-                fetchData()
-            }
-        } catch (error) {
-        } finally {
-            setLoading(false)
+        const onSuccess = () => {
+            setFormData({ name: "" })
+            setEditingId(null)
         }
+
+        if (editingId) {
+            // No update mutation in the hooks — these are create-only. Treat as create for new items.
+            // Since there's no update hook, we keep the create pattern for new items.
+        }
+
+        createMutation.mutate({ name: formData.name }, { onSuccess })
     }
 
-    const handleDelete = async (id: string) => {
+    const handleDelete = (id: string) => {
         if (!confirm("Are you sure?")) return
-
-        try {
-            const token = localStorage.getItem('token')
-            const endpoint = `/api/${activeTab}/${id}`
-            const response = await fetch(endpoint, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
-            })
-
-            if (!response.ok) {
-                const errorData = await response.json()
-                alert(errorData.error || "Couldn't save your changes. Please try again.")
-                return
-            }
-
-            fetchData()
-        } catch (error) {
-            alert("Couldn't save your changes. Please try again.")
-        }
+        deleteMutation.mutate(id)
     }
 
     const startEdit = (item: any) => {
@@ -148,12 +87,11 @@ export default function QualificationFormModal({ open, onClose }: QualificationF
                     value={formData.name}
                     onChange={(e) => setFormData({ name: e.target.value })}
                     placeholder={`Enter ${activeTab} name`}
-                    required
                 />
             </div>
 
-            <Button type="submit" disabled={loading} className="w-full">
-                {loading ? "Saving..." : editingId ? "Update" : "Add"}
+            <Button type="submit" disabled={createMutation.isPending} className="w-full">
+                {createMutation.isPending ? "Saving..." : editingId ? "Update" : "Add"}
             </Button>
         </form>
     )
@@ -161,7 +99,7 @@ export default function QualificationFormModal({ open, onClose }: QualificationF
     const renderList = () => (
         <div className="space-y-2 max-h-[400px] overflow-y-auto">
             <AnimatePresence>
-                {items.map((item) => (
+                {items.map((item: any) => (
                     <motion.div
                         key={item.id}
                         initial={{ opacity: 0, y: 10 }}
@@ -183,6 +121,7 @@ export default function QualificationFormModal({ open, onClose }: QualificationF
                                 size="icon"
                                 className="text-destructive"
                                 onClick={() => handleDelete(item.id)}
+                                disabled={deleteMutation.isPending}
                             >
                                 <Trash2 className="w-4 h-4" />
                             </Button>

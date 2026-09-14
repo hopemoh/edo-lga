@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPresignedUrl, extractS3Key, isS3Url } from "@/lib/s3";
+import { logError } from "@/lib/error-logger";
 
 export async function GET(request: NextRequest) {
   try {
@@ -32,6 +33,12 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ signedUrl });
   } catch (error) {
+    await logError({
+      source: "api/signed-url",
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      request,
+    });
     return NextResponse.json({ error: "Couldn't generate download link. Please try again." }, { status: 500 });
   }
 }

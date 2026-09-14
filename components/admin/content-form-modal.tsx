@@ -8,6 +8,13 @@ import { Label } from "@/components/ui/label"
 import RichTextEditor from "@/components/ui/rich-text-editor"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { motion } from "framer-motion"
+import { useContent, useUpsertContent } from "@/hooks/use-resources"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { contentSectionSchema } from "@/lib/validations"
+import type { z } from "zod"
+
+type ContentFormValues = z.infer<typeof contentSectionSchema>
 
 interface ContentFormModalProps {
   open: boolean
@@ -161,105 +168,103 @@ const defaultContent: Record<string, ContentData> = {
 export default function ContentFormModal({ open, onClose, onSuccess }: ContentFormModalProps) {
   const [contentData, setContentData] = useState<Record<string, ContentData>>(defaultContent)
   const [activeSection, setActiveSection] = useState('hero')
-  const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [successMessage, setSuccessMessage] = useState("")
 
+  const { data: content = [] } = useContent()
+  const upsertContent = useUpsertContent()
+
+  const { register, handleSubmit, formState: { errors }, reset, setValue, watch } = useForm<ContentFormValues>({
+    resolver: zodResolver(contentSectionSchema),
+    defaultValues: {
+      section: 'hero',
+      title: defaultContent.hero.title,
+      subtitle: defaultContent.hero.subtitle,
+      content: defaultContent.hero.content,
+    },
+  })
+
   useEffect(() => {
-    if (open) {
-      fetchContent()
+    if (content && content.length > 0) {
+      const newContentData = { ...defaultContent }
+      content.forEach((item: ContentData) => {
+        if (newContentData[item.section]) {
+          newContentData[item.section] = item
+        }
+      })
+      setContentData(newContentData)
     }
-  }, [open])
+  }, [content])
 
-  const fetchContent = async () => {
-    try {
-      const response = await fetch('/api/content')
-      if (response.ok) {
-        const content = await response.json()
-        const newContentData = { ...defaultContent }
-        content.forEach((item: ContentData) => {
-          if (newContentData[item.section]) {
-            newContentData[item.section] = item
-          }
-        })
-        setContentData(newContentData)
-      }
-    } catch (error) {
+  useEffect(() => {
+    const data = contentData[activeSection]
+    if (data) {
+      reset({
+        section: data.section,
+        title: data.title,
+        subtitle: data.subtitle,
+        content: data.content,
+      })
     }
-  }
+  }, [activeSection, contentData, reset])
 
-  const handleInputChange = (section: string, field: keyof ContentData, value: string) => {
-    setContentData(prev => ({
-      ...prev,
-      [section]: {
-        ...prev[section],
-        [field]: value
-      }
-    }))
-  }
-
-  const handleSubmit = async (section: string) => {
-    setLoading(true)
+  const handleFormSubmit = (data: ContentFormValues) => {
     setError("")
     setSuccessMessage("")
 
-    try {
-      const token = localStorage.getItem('token')
-      const response = await fetch('/api/content', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(contentData[section])
-      })
+    const sectionData: ContentData = {
+      section: data.section,
+      title: data.title,
+      subtitle: data.subtitle || "",
+      content: data.content || "",
+    }
 
-      if (response.ok) {
-        setSuccessMessage(`${section.charAt(0).toUpperCase() + section.slice(1)} section updated successfully!`)
+    setContentData(prev => ({
+      ...prev,
+      [data.section]: sectionData,
+    }))
+
+    upsertContent.mutate(sectionData, {
+      onSuccess: () => {
+        setSuccessMessage(`${data.section.charAt(0).toUpperCase() + data.section.slice(1)} section updated successfully!`)
         setTimeout(() => setSuccessMessage(""), 3000)
         onSuccess()
-      } else {
-        const result = await response.json()
-        setError(result.error || "Couldn't save your changes. Please try again.")
+      },
+      onError: (err: any) => {
+        setError(err.message || "Couldn't save your changes. Please try again.")
       }
-    } catch (err) {
-      setError("You appear to be offline. Please check your connection.")
-    } finally {
-      setLoading(false)
-    }
+    })
   }
 
   const renderSectionForm = (section: { id: string; label: string }) => {
-    const data = contentData[section.id]
-    if (!data) return null
+    if (activeSection !== section.id) return null
 
     return (
       <motion.form
         key={section.id}
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        onSubmit={(e) => {
-          e.preventDefault()
-          handleSubmit(section.id)
-        }}
+        onSubmit={handleSubmit(handleFormSubmit)}
         className="space-y-4"
       >
+        <input type="hidden" {...register("section")} value={section.id} />
+
         <div className="space-y-2">
           <Label htmlFor={`${section.id}-title`}>Title</Label>
           <Input
             id={`${section.id}-title`}
-            value={data.title}
-            onChange={(e) => handleInputChange(section.id, 'title', e.target.value)}
-            required
+            {...register("title")}
           />
+          {errors.title && (
+            <p className="text-sm text-destructive">{errors.title.message}</p>
+          )}
         </div>
 
         <div className="space-y-2">
           <Label htmlFor={`${section.id}-subtitle`}>Subtitle</Label>
           <Input
             id={`${section.id}-subtitle`}
-            value={data.subtitle}
-            onChange={(e) => handleInputChange(section.id, 'subtitle', e.target.value)}
+            {...register("subtitle")}
           />
         </div>
 
@@ -267,15 +272,15 @@ export default function ContentFormModal({ open, onClose, onSuccess }: ContentFo
           <Label htmlFor={`${section.id}-content`}>Content</Label>
           <div className="min-h-[200px]">
             <RichTextEditor
-              value={data.content}
-              onChange={(value) => handleInputChange(section.id, 'content', value)}
+              value={watch("content") || ""}
+              onChange={(value) => setValue("content", value)}
               placeholder="Enter content..."
             />
           </div>
         </div>
 
-        <Button type="submit" disabled={loading} className="w-full">
-          {loading ? "Updating..." : `Update ${section.label} Section`}
+        <Button type="submit" disabled={upsertContent.isPending} className="w-full">
+          {upsertContent.isPending ? "Updating..." : `Update ${section.label} Section`}
         </Button>
       </motion.form>
     )

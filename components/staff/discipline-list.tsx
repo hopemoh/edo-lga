@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -11,6 +11,7 @@ import { format } from "date-fns"
 import DisciplineFormModal from "@/components/admin/discipline-form-modal"
 import SanctionManagementModal from "@/components/admin/sanction-management-modal"
 import RichTextDisplay from "@/components/ui/rich-text-display"
+import { useDisciplinaryCases } from "@/hooks/use-resources"
 
 interface DisciplinaryCase {
     id: string
@@ -34,29 +35,12 @@ interface DisciplineListProps {
 }
 
 export default function DisciplineList({ isAdmin = false }: DisciplineListProps) {
-    const [cases, setCases] = useState<DisciplinaryCase[]>([])
-    const [loading, setLoading] = useState(true)
     const [searchTerm, setSearchTerm] = useState("")
     const [isFormOpen, setIsFormOpen] = useState(false)
     const [isSanctionModalOpen, setIsSanctionModalOpen] = useState(false)
     const [editingCase, setEditingCase] = useState<DisciplinaryCase | null>(null)
 
-    useEffect(() => {
-        fetchCases()
-    }, [])
-
-    const fetchCases = async () => {
-        try {
-            const response = await fetch('/api/disciplinary')
-            if (response.ok) {
-                const data = await response.json()
-                setCases(data)
-            }
-        } catch (error) {
-        } finally {
-            setLoading(false)
-        }
-    }
+    const { data: cases = [], isLoading: loading, refetch: fetchCases } = useDisciplinaryCases()
 
     const handleEdit = (c: DisciplinaryCase) => {
         setEditingCase(c)

@@ -11,6 +11,8 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { AlertCircle, Upload } from "lucide-react"
 import { motion } from "framer-motion"
 import type { Staff } from "@/lib/types"
+import { useChangeReasons, useRanks, useStatuses, useQualifications } from "@/hooks/use-resources"
+import { useCreateChangeRequest } from "@/hooks/use-change-requests"
 
 interface ChangeRequestModalProps {
   open: boolean
@@ -20,12 +22,6 @@ interface ChangeRequestModalProps {
   onSuccess: () => void
   isNewDocument?: boolean
   initialSelectedFields?: string[]
-}
-
-interface ChangeReason {
-  id: string
-  name: string
-  requiresDocument: boolean
 }
 
 interface FieldOption {
@@ -59,33 +55,26 @@ export default function ChangeRequestModal({
   onSuccess,
   initialSelectedFields = []
 }: ChangeRequestModalProps) {
-  // requestType is now deprecated but kept in interface for compatibility if needed, 
-  // but we won't use it to restrict the UI anymore.
   const [selectedFields, setSelectedFields] = useState<string[]>([])
   const [selectedReason, setSelectedReason] = useState<string>('')
   const [customReason, setCustomReason] = useState('')
   const [adminNote, setAdminNote] = useState('')
   const [supportingDocument, setSupportingDocument] = useState<File | null>(null)
   const [formData, setFormData] = useState<Record<string, any>>({})
-
-  const [reasons, setReasons] = useState<ChangeReason[]>([])
-  const [ranks, setRanks] = useState<any[]>([])
-  const [statuses, setStatuses] = useState<any[]>([])
-  const [qualifications, setQualifications] = useState<any[]>([])
   const [selectedQualifications, setSelectedQualifications] = useState<string[]>([])
-  const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
-  const selectedReasonData = reasons.find(r => r.id === selectedReason)
-  const requiresDocument = selectedReasonData?.requiresDocument || selectedFields.includes('qualifications')
+  const { data: reasons = [] } = useChangeReasons()
+  const { data: ranks = [] } = useRanks()
+  const { data: statuses = [] } = useStatuses()
+  const { data: qualifications = [] } = useQualifications()
+  const createMutation = useCreateChangeRequest()
 
-  // Check if document change is requested (permission to update)
-  // We check if the document field is selected
-  const isDocumentChange = selectedFields.includes('documentUrl')
+  const selectedReasonData = reasons.find((r: any) => r.id === selectedReason)
+  const requiresDocument = selectedReasonData?.requiresDocument || selectedFields.includes('qualifications')
 
   useEffect(() => {
     if (open) {
-      fetchData()
       resetForm()
     }
   }, [open, staff])
@@ -112,49 +101,6 @@ export default function ChangeRequestModal({
       remark: staff.remark || '',
     })
     setError("")
-  }
-
-  const fetchData = async () => {
-    try {
-      const token = localStorage.getItem('token')
-
-      // Fetch change reasons
-      const reasonsResponse = await fetch('/api/change-reasons', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-      if (reasonsResponse.ok) {
-        const reasonsData = await reasonsResponse.json()
-        setReasons(reasonsData)
-      }
-
-      // Fetch ranks
-      const ranksResponse = await fetch('/api/ranks', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-      if (ranksResponse.ok) {
-        const ranksData = await ranksResponse.json()
-        setRanks(ranksData)
-      }
-
-      // Fetch statuses
-      const statusesResponse = await fetch('/api/status', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-      if (statusesResponse.ok) {
-        const statusesData = await statusesResponse.json()
-        setStatuses(statusesData)
-      }
-
-      // Fetch qualifications
-      const qualificationsResponse = await fetch('/api/qualifications', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-      if (qualificationsResponse.ok) {
-        const qualificationsData = await qualificationsResponse.json()
-        setQualifications(qualificationsData)
-      }
-    } catch (error) {
-    }
   }
 
   const handleFieldToggle = (fieldKey: string) => {
@@ -204,25 +150,23 @@ export default function ChangeRequestModal({
       return
     }
 
-    setLoading(true)
     setError("")
 
-    try {
-      const token = localStorage.getItem('token')
+    // Prepare changes object
+    const changes: any = {}
+    selectedFields.forEach(field => {
+      if (field === 'qualifications') {
+        changes[field] = selectedQualifications
+      } else {
+        changes[field] = formData[field]
+      }
+    })
 
-      // Prepare changes object (current values for reference)
-      const changes: any = {}
-      selectedFields.forEach(field => {
-        if (field === 'qualifications') {
-          changes[field] = selectedQualifications
-        } else {
-          changes[field] = formData[field]
-        }
-      })
-
-      // Upload supporting document if provided
-      let supportingDocumentUrl = null
-      if (supportingDocument) {
+    // Upload supporting document if provided (raw fetch for one-off file upload)
+    let supportingDocumentUrl = null
+    if (supportingDocument) {
+      try {
+        const token = localStorage.getItem('token')
         const formDataUpload = new FormData()
         formDataUpload.append('file', supportingDocument)
 
@@ -238,51 +182,42 @@ export default function ChangeRequestModal({
         } else {
           throw new Error("Couldn't save your changes. Please try again.")
         }
+      } catch {
+        setError("Couldn't upload supporting document. Please try again.")
+        return
       }
-
-      // If documentUrl is selected, we mark it as pending update
-      // This allows existing approval logic to see "documentUrl" in changes
-      if (selectedFields.includes('documentUrl')) {
-        changes.documentUrl = "PENDING_UPDATE"
-      }
-
-      // Determine type: If ONLY documentUrl is selected, type is DOCUMENT.
-      // Otherwise DATA (even if mixed).
-      const isOnlyDocument = selectedFields.length === 1 && selectedFields[0] === 'documentUrl'
-      const finalRequestType = isOnlyDocument ? 'DOCUMENT' : 'DATA'
-
-      const response = await fetch('/api/change-requests', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          staffId: staff.id,
-          changes,
-          selectedFields,
-          reasonId: selectedReason,
-          reason: customReason,
-          adminNote: adminNote.trim() || null,
-          supportingDocumentUrl,
-          type: finalRequestType,
-          isNewDocument: false // We are not uploading the *new* document here, just requesting permission
-        })
-      })
-
-      if (response.ok) {
-        onSuccess()
-        onClose()
-        resetForm()
-      } else {
-        const data = await response.json()
-        setError(data.error || "Couldn't save your changes. Please try again.")
-      }
-    } catch (err) {
-      setError("You appear to be offline. Please check your connection.")
-    } finally {
-      setLoading(false)
     }
+
+    if (selectedFields.includes('documentUrl')) {
+      changes.documentUrl = "PENDING_UPDATE"
+    }
+
+    const isOnlyDocument = selectedFields.length === 1 && selectedFields[0] === 'documentUrl'
+    const finalRequestType = isOnlyDocument ? 'DOCUMENT' : 'DATA'
+
+    createMutation.mutate(
+      {
+        staffId: staff.id,
+        changes,
+        selectedFields: selectedFields.length > 0 ? selectedFields : undefined,
+        reasonId: selectedReason || undefined,
+        reason: customReason,
+        adminNote: adminNote.trim() || undefined,
+        supportingDocumentUrl: supportingDocumentUrl || undefined,
+        type: finalRequestType,
+        isNewDocument: false
+      },
+      {
+        onSuccess: () => {
+          onSuccess()
+          onClose()
+          resetForm()
+        },
+        onError: (err: any) => {
+          setError(err.message || "Couldn't save your changes. Please try again.")
+        },
+      }
+    )
   }
 
   const getOriginalValue = (field: string) => {
@@ -307,7 +242,6 @@ export default function ChangeRequestModal({
   const renderFieldInput = (field: FieldOption) => {
     if (!selectedFields.includes(field.key)) return null
 
-    // Fields are disabled since they show current/old data for approval reference
     const isDisabled = true
 
     switch (field.type) {
@@ -352,7 +286,7 @@ export default function ChangeRequestModal({
           return (
             <div className="space-y-2">
               <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto border rounded p-2 bg-gray-100">
-                {qualifications.map((qual) => (
+                {qualifications.map((qual: any) => (
                   <label key={qual.id} className="flex items-center space-x-2 text-sm text-gray-600">
                     <input
                       type="checkbox"
@@ -419,7 +353,7 @@ export default function ChangeRequestModal({
                 <SelectValue placeholder="Select reason for change" />
               </SelectTrigger>
               <SelectContent>
-                {reasons.map((reason) => (
+                {reasons.map((reason: any) => (
                   <SelectItem key={reason.id} value={reason.id}>
                     {reason.name} {reason.requiresDocument && '(Requires Document)'}
                   </SelectItem>
@@ -521,7 +455,6 @@ export default function ChangeRequestModal({
               onChange={(e) => setCustomReason(e.target.value)}
               placeholder="Provide additional details about the change request (reference the staff's letter)"
               rows={3}
-              required
             />
           </div>
 
@@ -551,8 +484,8 @@ export default function ChangeRequestModal({
             <Button type="button" variant="outline" onClick={onClose} className="flex-1">
               Cancel
             </Button>
-            <Button type="submit" disabled={loading} className="flex-1">
-              {loading ? "Processing..." : "Process Request"}
+            <Button type="submit" disabled={createMutation.isPending} className="flex-1">
+              {createMutation.isPending ? "Processing..." : "Process Request"}
             </Button>
           </div>
         </motion.form>

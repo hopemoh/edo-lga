@@ -1,43 +1,15 @@
 "use client"
 
-import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import RichTextDisplay from "@/components/ui/rich-text-display"
-
-interface AboutContent {
-  title: string
-  subtitle: string
-  content: string
-}
+import { useContent } from "@/hooks/use-resources"
 
 export default function About() {
-  const [content, setContent] = useState<AboutContent>({
-    title: "The Heartbeat of Nigeria",
-    subtitle: "Our Heritage",
-    content: "Edo State stands as a beacon of African heritage and cultural pride. Home to the historic Kingdom of Benin, the state is renowned for its magnificent Oba's Palace, intricate bronze works, and rich artistic traditions that have captivated the world for centuries."
-  })
-
-  useEffect(() => {
-    fetchContent()
-  }, [])
-
-  const fetchContent = async () => {
-    try {
-      const response = await fetch('/api/content')
-      if (response.ok) {
-        const data = await response.json()
-        const aboutData = data.find((item: any) => item.section === 'about')
-        if (aboutData) {
-          setContent({
-            title: aboutData.title,
-            subtitle: aboutData.subtitle || "Our Heritage",
-            content: aboutData.content
-          })
-        }
-      }
-    } catch (error) {
-    }
-  }
+  const { data: contentData } = useContent()
+  const aboutData = contentData?.find((item: any) => item.section === 'about')
+  const content = aboutData
+    ? { title: aboutData.title, subtitle: aboutData.subtitle || "Our Heritage", content: aboutData.content }
+    : { title: "The Heartbeat of Nigeria", subtitle: "Our Heritage", content: "Edo State stands as a beacon of African heritage and cultural pride. Home to the historic Kingdom of Benin, the state is renowned for its magnificent Oba's Palace, intricate bronze works, and rich artistic traditions that have captivated the world for centuries." }
 
   return (
     <section className="py-20 px-4 md:px-8 lg:px-12 bg-red-gradient-to-br from-background via-card to-background">

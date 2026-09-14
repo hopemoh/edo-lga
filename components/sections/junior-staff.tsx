@@ -1,44 +1,16 @@
 "use client"
 
-import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { Users2, Target, Handshake, MessageCircle } from "lucide-react"
 import RichTextDisplay from "@/components/ui/rich-text-display"
-
-interface SectionContent {
-    title: string
-    subtitle: string
-    content: string
-}
+import { useContent } from "@/hooks/use-resources"
 
 export default function JuniorStaffSection() {
-    const [content, setContent] = useState<SectionContent>({
-        title: "Junior Staff Committee",
-        subtitle: "Welfare & Representation",
-        content: "The Junior Staff Management Committee represents the interests of junior staff members across all Local Government Areas. The committee works to address welfare issues, promote fair treatment, and ensure the voice of junior staff is heard."
-    })
-
-    useEffect(() => {
-        fetchContent()
-    }, [])
-
-    const fetchContent = async () => {
-        try {
-            const response = await fetch('/api/content')
-            if (response.ok) {
-                const data = await response.json()
-                const sectionData = data.find((item: SectionContent & { section: string }) => item.section === 'junior-staff')
-                if (sectionData) {
-                    setContent({
-                        title: sectionData.title,
-                        subtitle: sectionData.subtitle || "Welfare & Representation",
-                        content: sectionData.content
-                    })
-                }
-            }
-        } catch (error) {
-        }
-    }
+    const { data: contentData } = useContent()
+    const sectionData = contentData?.find((item: any) => item.section === 'junior-staff')
+    const content = sectionData
+        ? { title: sectionData.title, subtitle: sectionData.subtitle || "Welfare & Representation", content: sectionData.content }
+        : { title: "Junior Staff Committee", subtitle: "Welfare & Representation", content: "The Junior Staff Management Committee represents the interests of junior staff members across all Local Government Areas. The committee works to address welfare issues, promote fair treatment, and ensure the voice of junior staff is heard." }
 
     const functions = [
         {

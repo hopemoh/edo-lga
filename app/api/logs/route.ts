@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { logEntries } from "@/lib/db/schema";
 import { desc } from "drizzle-orm";
 import { getTokenFromRequest, verifyToken } from "@/lib/auth";
+import { logError } from "@/lib/error-logger";
 
 export async function GET(request: NextRequest) {
   try {
@@ -23,6 +24,14 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(logs);
   } catch (error) {
+    await logError({
+      source: "api/logs",
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      request,
+      userId: user?.id,
+      userRole: user?.role,
+    });
     return NextResponse.json(
       { error: "Couldn't load activity logs. Please try again." },
       { status: 500 }

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,15 +10,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Plus, Settings, FileText } from "lucide-react"
 import { motion } from "framer-motion"
-
-interface ChangeReason {
-  id: string
-  name: string
-  requiresDocument: boolean
-  isActive: boolean
-  createdAt: string
-  updatedAt: string
-}
+import { useChangeReasons, useCreateChangeReason, useUpdateChangeReason } from "@/hooks/use-resources"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { changeReasonSchema } from "@/lib/validations"
 
 interface ChangeReasonsManagerProps {
   open: boolean
@@ -26,92 +21,33 @@ interface ChangeReasonsManagerProps {
 }
 
 export default function ChangeReasonsManager({ open, onClose }: ChangeReasonsManagerProps) {
-  const [reasons, setReasons] = useState<ChangeReason[]>([])
   const [showAddForm, setShowAddForm] = useState(false)
-  const [newReason, setNewReason] = useState({ name: '', requiresDocument: false })
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState("")
 
-  useEffect(() => {
-    if (open) {
-      fetchReasons()
-    }
-  }, [open])
+  const { data: reasons = [] } = useChangeReasons()
+  const createReason = useCreateChangeReason()
+  const updateReason = useUpdateChangeReason()
 
-  const fetchReasons = async () => {
-    try {
-      const token = localStorage.getItem('token')
-      const response = await fetch('/api/change-reasons', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-      
-      if (response.ok) {
-        const data = await response.json()
-        setReasons(data)
-      }
-    } catch (error) {
-    }
-  }
+  const { register, handleSubmit, formState: { errors }, reset, setValue, watch } = useForm({
+    resolver: zodResolver(changeReasonSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+      requiresDocument: false,
+      isActive: true,
+    },
+  })
 
-  const handleAddReason = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    if (!newReason.name.trim()) {
-      setError("Reason name is required")
-      return
-    }
-
-    setLoading(true)
-    setError("")
-
-    try {
-      const token = localStorage.getItem('token')
-      const response = await fetch('/api/change-reasons', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(newReason)
-      })
-
-      if (response.ok) {
-        const createdReason = await response.json()
-        setReasons(prev => [...prev, createdReason])
-        setNewReason({ name: '', requiresDocument: false })
+  const handleAddReason = handleSubmit((data) => {
+    createReason.mutate(data, {
+      onSuccess: () => {
+        reset()
         setShowAddForm(false)
-      } else {
-        const data = await response.json()
-        setError(data.error || "Couldn't save your changes. Please try again.")
-      }
-    } catch (err) {
-      setError("You appear to be offline. Please check your connection.")
-    } finally {
-      setLoading(false)
-    }
-  }
+      },
+    })
+  })
 
-  const toggleReasonStatus = async (reasonId: string, isActive: boolean) => {
-    try {
-      const token = localStorage.getItem('token')
-      const response = await fetch(`/api/change-reasons/${reasonId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ isActive: !isActive })
-      })
-
-      if (response.ok) {
-        setReasons(prev => prev.map(reason => 
-          reason.id === reasonId 
-            ? { ...reason, isActive: !isActive }
-            : reason
-        ))
-      }
-    } catch (error) {
-    }
+  const toggleReasonStatus = (reasonId: string, isActive: boolean) => {
+    updateReason.mutate({ id: reasonId, data: { isActive: !isActive } })
   }
 
   return (
@@ -128,7 +64,7 @@ export default function ChangeReasonsManager({ open, onClose }: ChangeReasonsMan
           {/* Add New Reason */}
           <div className="space-y-4">
             {!showAddForm ? (
-              <Button 
+              <Button
                 onClick={() => setShowAddForm(true)}
                 className="w-full"
                 variant="outline"
@@ -147,19 +83,20 @@ export default function ChangeReasonsManager({ open, onClose }: ChangeReasonsMan
                       <Label htmlFor="reason-name">Reason Name *</Label>
                       <Input
                         id="reason-name"
-                        value={newReason.name}
-                        onChange={(e) => setNewReason(prev => ({ ...prev, name: e.target.value }))}
+                        {...register("name")}
                         placeholder="e.g., Change of marital status"
-                        required
                       />
+                      {errors.name && (
+                        <p className="text-sm text-destructive">{errors.name.message}</p>
+                      )}
                     </div>
 
                     <div className="flex items-center space-x-2">
                       <Checkbox
                         id="requires-document"
-                        checked={newReason.requiresDocument}
-                        onCheckedChange={(checked) => 
-                          setNewReason(prev => ({ ...prev, requiresDocument: checked as boolean }))
+                        checked={watch("requiresDocument")}
+                        onCheckedChange={(checked) =>
+                          setValue("requiresDocument", checked as boolean)
                         }
                       />
                       <Label htmlFor="requires-document" className="text-sm">
@@ -167,27 +104,20 @@ export default function ChangeReasonsManager({ open, onClose }: ChangeReasonsMan
                       </Label>
                     </div>
 
-                    {error && (
-                      <div className="bg-red-50 border border-red-200 rounded p-3 text-sm text-red-700">
-                        {error}
-                      </div>
-                    )}
-
                     <div className="flex gap-2">
-                      <Button 
-                        type="button" 
-                        variant="outline" 
+                      <Button
+                        type="button"
+                        variant="outline"
                         onClick={() => {
                           setShowAddForm(false)
-                          setNewReason({ name: '', requiresDocument: false })
-                          setError("")
+                          reset()
                         }}
                         className="flex-1"
                       >
                         Cancel
                       </Button>
-                      <Button type="submit" disabled={loading} className="flex-1">
-                        {loading ? "Adding..." : "Add Reason"}
+                      <Button type="submit" disabled={createReason.isPending} className="flex-1">
+                        {createReason.isPending ? "Adding..." : "Add Reason"}
                       </Button>
                     </div>
                   </form>
@@ -205,7 +135,7 @@ export default function ChangeReasonsManager({ open, onClose }: ChangeReasonsMan
               </div>
             ) : (
               <div className="space-y-3">
-                {reasons.map((reason) => (
+                {reasons.map((reason: any) => (
                   <motion.div
                     key={reason.id}
                     initial={{ opacity: 0, y: 10 }}
@@ -223,7 +153,7 @@ export default function ChangeReasonsManager({ open, onClose }: ChangeReasonsMan
                                   Requires Document
                                 </Badge>
                               )}
-                              <Badge 
+                              <Badge
                                 variant={reason.isActive ? "default" : "secondary"}
                                 className="text-xs"
                               >
@@ -239,6 +169,7 @@ export default function ChangeReasonsManager({ open, onClose }: ChangeReasonsMan
                               variant="outline"
                               size="sm"
                               onClick={() => toggleReasonStatus(reason.id, reason.isActive)}
+                              disabled={updateReason.isPending}
                             >
                               {reason.isActive ? "Deactivate" : "Activate"}
                             </Button>

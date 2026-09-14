@@ -1,44 +1,16 @@
 "use client"
 
-import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { BookOpen, Users, Monitor, Award } from "lucide-react"
 import RichTextDisplay from "@/components/ui/rich-text-display"
-
-interface SectionContent {
-    title: string
-    subtitle: string
-    content: string
-}
+import { useContent } from "@/hooks/use-resources"
 
 export default function TrainingSection() {
-    const [content, setContent] = useState<SectionContent>({
-        title: "In-Service Training",
-        subtitle: "Capacity Building",
-        content: "The Commission organizes In-Service Training programs to enhance staff competencies and keep them updated with modern practices and technologies. Our training initiatives are key to effective service delivery across all Local Government Councils."
-    })
-
-    useEffect(() => {
-        fetchContent()
-    }, [])
-
-    const fetchContent = async () => {
-        try {
-            const response = await fetch('/api/content')
-            if (response.ok) {
-                const data = await response.json()
-                const sectionData = data.find((item: SectionContent & { section: string }) => item.section === 'training')
-                if (sectionData) {
-                    setContent({
-                        title: sectionData.title,
-                        subtitle: sectionData.subtitle || "Capacity Building",
-                        content: sectionData.content
-                    })
-                }
-            }
-        } catch (error) {
-        }
-    }
+    const { data: contentData } = useContent()
+    const sectionData = contentData?.find((item: any) => item.section === 'training')
+    const content = sectionData
+        ? { title: sectionData.title, subtitle: sectionData.subtitle || "Capacity Building", content: sectionData.content }
+        : { title: "In-Service Training", subtitle: "Capacity Building", content: "The Commission organizes In-Service Training programs to enhance staff competencies and keep them updated with modern practices and technologies. Our training initiatives are key to effective service delivery across all Local Government Councils." }
 
     const programs = [
         {

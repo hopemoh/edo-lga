@@ -7,13 +7,13 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { X, Save, Clock, AlertTriangle } from "lucide-react"
+import { useSettings, useUpsertSetting } from "@/hooks/use-resources"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { settingSchema } from "@/lib/validations"
+import type { z } from "zod"
 
-interface SystemSetting {
-    id: string
-    key: string
-    value: string
-    label: string
-}
+type SettingFormValues = z.infer<typeof settingSchema>
 
 interface SystemSettingsModalProps {
     open: boolean
@@ -21,88 +21,44 @@ interface SystemSettingsModalProps {
 }
 
 export default function SystemSettingsModal({ open, onClose }: SystemSettingsModalProps) {
-    const [settings, setSettings] = useState<SystemSetting[]>([])
-    const [loading, setLoading] = useState(true)
-    const [saving, setSaving] = useState(false)
-    const [error, setError] = useState("")
     const [success, setSuccess] = useState("")
 
-    // Specific values for the window
-    const [windowValue, setWindowValue] = useState("30")
+    const { data: settings = [], isLoading: loading } = useSettings()
+    const upsertMutation = useUpsertSetting()
+
+    const { register, handleSubmit, formState: { errors }, reset } = useForm<SettingFormValues>({
+        resolver: zodResolver(settingSchema),
+        defaultValues: {
+            key: "DOCUMENT_REPLACEMENT_WINDOW",
+            value: "30",
+        },
+    })
 
     useEffect(() => {
-        if (open) {
-            fetchSettings()
-        }
-    }, [open])
-
-    const fetchSettings = async () => {
-        setLoading(true)
-        setError("")
-        try {
-            const response = await fetch("/api/settings", {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
-            })
-            if (response.ok) {
-                const data = await response.json()
-                setSettings(data)
-
-                // Find the window setting
-                const windowSetting = data.find((s: SystemSetting) => s.key === "DOCUMENT_REPLACEMENT_WINDOW")
-                if (windowSetting) {
-                    setWindowValue(windowSetting.value)
-                }
-            } else {
-                setError("Couldn't load settings. Please try again.")
+        if (open && settings.length > 0) {
+            const windowSetting = settings.find((s: any) => s.key === "DOCUMENT_REPLACEMENT_WINDOW")
+            if (windowSetting) {
+                reset({ key: "DOCUMENT_REPLACEMENT_WINDOW", value: windowSetting.value })
             }
-        } catch (err) {
-            setError("You appear to be offline. Please check your connection.")
-        } finally {
-            setLoading(false)
         }
-    }
+    }, [open, settings, reset])
 
-    const handleSave = async () => {
-        setSaving(true)
-        setError("")
+    const handleSave = (data: SettingFormValues) => {
         setSuccess("")
 
-        // Validate window value
-        const minutes = parseInt(windowValue, 10)
-        if (isNaN(minutes) || minutes < 0) {
-            setError("Please enter a valid number of minutes (0 or more)")
-            setSaving(false)
-            return
-        }
-
-        try {
-            const response = await fetch("/api/settings", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+        upsertMutation.mutate(
+            {
+                key: "DOCUMENT_REPLACEMENT_WINDOW",
+                value: data.value,
+                label: "Document Replacement Window (Minutes)"
+            },
+            {
+                onSuccess: () => {
+                    setSuccess("Settings updated successfully")
+                    setTimeout(() => setSuccess(""), 3000)
                 },
-                body: JSON.stringify({
-                    key: "DOCUMENT_REPLACEMENT_WINDOW",
-                    value: windowValue,
-                    label: "Document Replacement Window (Minutes)"
-                })
-            })
-
-            if (response.ok) {
-                setSuccess("Settings updated successfully")
-                setTimeout(() => setSuccess(""), 3000)
-            } else {
-                const data = await response.json()
-                setError(data.error || "Couldn't save your changes. Please try again.")
             }
-        } catch (err) {
-            setError("You appear to be offline. Please check your connection.")
-        } finally {
-            setSaving(false)
-        }
+        )
     }
 
     return (
@@ -142,47 +98,48 @@ export default function SystemSettingsModal({ open, onClose }: SystemSettingsMod
                                         </p>
                                     </div>
 
-                                    <div className="space-y-2">
-                                        <Label htmlFor="window">Document Replacement Window (Minutes)</Label>
-                                        <div className="flex gap-2">
-                                            <Input
-                                                id="window"
-                                                type="number"
-                                                value={windowValue}
-                                                onChange={(e) => setWindowValue(e.target.value)}
-                                                placeholder="30"
-                                                min="0"
-                                            />
-                                            <span className="flex items-center text-sm text-muted-foreground whitespace-nowrap">
-                                                min
-                                            </span>
+                                    <form onSubmit={handleSubmit(handleSave)} className="space-y-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="window">Document Replacement Window (Minutes)</Label>
+                                            <div className="flex gap-2">
+                                                <Input
+                                                    id="window"
+                                                    type="number"
+                                                    {...register("value")}
+                                                    placeholder="30"
+                                                    min="0"
+                                                />
+                                                <span className="flex items-center text-sm text-muted-foreground whitespace-nowrap">
+                                                    min
+                                                </span>
+                                            </div>
+                                            {errors.value && (
+                                                <p className="text-sm text-destructive">{errors.value.message}</p>
+                                            )}
+                                            <p className="text-xs text-muted-foreground mt-1">
+                                                Admins will have this much time to replace a document after it's approved by the Chairman.
+                                                Set to 0 to disable replacement immediately after approval.
+                                            </p>
                                         </div>
-                                        <p className="text-xs text-muted-foreground mt-1">
-                                            Admins will have this much time to replace a document after it's approved by the Chairman.
-                                            Set to 0 to disable replacement immediately after approval.
-                                        </p>
-                                    </div>
-                                </div>
 
-                                {error && (
-                                    <p className="text-sm text-destructive bg-destructive/10 p-2 rounded">{error}</p>
-                                )}
-                                {success && (
-                                    <p className="text-sm text-emerald-600 bg-emerald-50 p-2 rounded">{success}</p>
-                                )}
+                                        {success && (
+                                            <p className="text-sm text-emerald-600 bg-emerald-50 p-2 rounded">{success}</p>
+                                        )}
 
-                                <div className="flex justify-end gap-3 pt-4 border-t border-border/50">
-                                    <Button variant="outline" onClick={onClose}>
-                                        Cancel
-                                    </Button>
-                                    <Button
-                                        onClick={handleSave}
-                                        disabled={loading || saving}
-                                        className="bg-linear-to-r from-primary to-accent"
-                                    >
-                                        <Save className="w-4 h-4 mr-2" />
-                                        {saving ? "Saving..." : "Save Settings"}
-                                    </Button>
+                                        <div className="flex justify-end gap-3 pt-4 border-t border-border/50">
+                                            <Button type="button" variant="outline" onClick={onClose}>
+                                                Cancel
+                                            </Button>
+                                            <Button
+                                                type="submit"
+                                                disabled={loading || upsertMutation.isPending}
+                                                className="bg-linear-to-r from-primary to-accent"
+                                            >
+                                                <Save className="w-4 h-4 mr-2" />
+                                                {upsertMutation.isPending ? "Saving..." : "Save Settings"}
+                                            </Button>
+                                        </div>
+                                    </form>
                                 </div>
                             </div>
                         </Card>

@@ -3,12 +3,15 @@ import { useState, useEffect } from 'react'
 import { motion } from "framer-motion"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { X, Mail, Briefcase, Award, Building2, BarChart3, Upload, FileEdit, FileText, ShieldCheck } from "lucide-react"
+import { X, Mail, Briefcase, Award, Upload, FileEdit, FileText, ShieldCheck, Calendar, MapPin, Hash, User } from "lucide-react"
 import type { Staff } from "@/lib/types"
 import ChangeRequestModal from "../admin/change-request-modal"
 import DocumentHistoryModal from "./document-history-modal"
 import DataChangeHistoryModal from "./data-change-history-modal"
 import RoleAssignmentModal from "../admin/role-assignment-modal"
+import { useChangeRequests } from "@/hooks/use-change-requests"
+import { useAuthStore } from "@/lib/store"
+import { toast } from "sonner"
 
 interface StaffDetailModalProps {
   staff: Staff
@@ -34,23 +37,16 @@ export default function StaffDetailModal({ staff, onClose, onUpdate, onEdit }: S
   const [showRoleAssignment, setShowRoleAssignment] = useState(false)
   const [initialSelectedFields, setInitialSelectedFields] = useState<string[]>([])
   const [canReplace, setCanReplace] = useState(false)
-  const [pendingDataRequest, setPendingDataRequest] = useState<any | null>(null)
-  const [pendingDocumentRequest, setPendingDocumentRequest] = useState<any | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
+  const currentUser = useAuthStore((s) => s.user)
+  const isAdmin = useAuthStore((s) => s.isAdmin())
 
-  const [currentUser, setCurrentUser] = useState<any>(null)
-  const [isAdmin, setIsAdmin] = useState(false)
+  const { data: changeRequests } = useChangeRequests({ staffId: staff.id })
 
-  useEffect(() => {
-    const user = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("currentUser") || "null") : null
-    if (user) {
-      setCurrentUser(user)
-      setIsAdmin(['ADMIN', 'SECRETARY', 'CHAIRMAN'].includes(user.role?.toUpperCase()))
-    }
-  }, [])
+  const pendingDataRequest = changeRequests?.find((req: any) => req.type === 'DATA' && !['COMPLETED', 'REJECTED', 'CHAIRMAN_APPROVED'].includes(req.status.toUpperCase())) || null
+  const pendingDocumentRequest = changeRequests?.find((req: any) => req.type === 'DOCUMENT' && !['COMPLETED', 'REJECTED', 'CHAIRMAN_APPROVED'].includes(req.status.toUpperCase())) || null
 
-  // Fetch presigned URL for document viewing
   const fetchDocumentUrl = async () => {
     if (!staff.documentUrl) return;
     const token = localStorage.getItem('token');
@@ -81,24 +77,6 @@ export default function StaffDetailModal({ staff, onClose, onUpdate, onEdit }: S
     }
 
     try {
-      // Fetch pending requests (fetch all to determine if any are in progress)
-      const requestsResponse = await fetch(`/api/change-requests?staffId=${staff.id}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (requestsResponse.ok) {
-        const requests = await requestsResponse.json();
-
-        // A request is considered pending if it's not completed, rejected, or fully approved by chairman
-        const isPending = (status: string) => {
-          const s = status.toUpperCase();
-          return !['COMPLETED', 'REJECTED', 'CHAIRMAN_APPROVED'].includes(s);
-        };
-
-        setPendingDataRequest(requests.find((req: any) => req.type === 'DATA' && isPending(req.status)) || null);
-        setPendingDocumentRequest(requests.find((req: any) => req.type === 'DOCUMENT' && isPending(req.status)) || null);
-      }
-
-      // Check document replacement eligibility
       if (staff.documentUrl) {
         const replacementResponse = await fetch(`/api/staff/${staff.id}/document/check-replacement`, {
           headers: { 'Authorization': `Bearer ${token}` }
@@ -108,7 +86,7 @@ export default function StaffDetailModal({ staff, onClose, onUpdate, onEdit }: S
           setCanReplace(data.canReplace);
         }
       } else {
-        setCanReplace(true); // Can always upload if no document exists
+        setCanReplace(true);
       }
     } catch (error) {
     } finally {
@@ -116,7 +94,6 @@ export default function StaffDetailModal({ staff, onClose, onUpdate, onEdit }: S
     }
   };
 
-  // Check document replacement eligibility on component mount
   useEffect(() => {
     fetchRequestStatus();
   }, [staff.id])
@@ -130,7 +107,6 @@ export default function StaffDetailModal({ staff, onClose, onUpdate, onEdit }: S
       return;
     }
 
-    // Check if replacement is allowed
     if (staff.documentUrl && !canReplace) {
       setUploadError('Document can only be replaced within 30 minutes of upload. Please submit a change request instead.');
       return;
@@ -153,13 +129,10 @@ export default function StaffDetailModal({ staff, onClose, onUpdate, onEdit }: S
 
       if (response.ok) {
         const result = await response.json();
-        // Reset the file input
         event.target.value = '';
-        // Update the staff state with new document URL
         if (onUpdate && result.staff) {
           onUpdate(result.staff);
         }
-        // Close modal to show updated data
         onClose();
       } else {
         const error = await response.json();
@@ -169,7 +142,6 @@ export default function StaffDetailModal({ staff, onClose, onUpdate, onEdit }: S
       setUploadError("You appear to be offline. Please check your connection.");
     } finally {
       setUploading(false);
-      // Reset the file input
       event.target.value = '';
     }
   };
@@ -186,28 +158,58 @@ export default function StaffDetailModal({ staff, onClose, onUpdate, onEdit }: S
       />
 
       {/* Modal */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      >
-        <Card className="w-full max-w-5xl max-h-[90vh] overflow-y-auto border-primary/20 bg-card">
-          {/* Header */}
-          <div className="sticky top-0 bg-linear-to-r from-primary/10 to-accent/10 px-6 py-6 border-b border-primary/20 flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold text-foreground">{staff.name}</h2>
-              <p className="text-primary font-semibold mt-1">{typeof staff.rank === 'object' ? staff.rank?.name : staff.rank || 'N/A'}</p>
-            </div>
-            <Button variant="ghost" size="sm" onClick={onClose} className="h-8 w-8 p-0">
-              <X className="w-5 h-5" />
-            </Button>
-          </div>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <Card className="relative w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden border-primary/20 bg-card">
+          {/* Fixed X button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            className="absolute top-4 right-4 z-10 h-8 w-8 p-0 rounded-full bg-background/80 backdrop-blur-sm border border-border hover:bg-destructive/10 hover:text-destructive"
+          >
+            <X className="w-4 h-4" />
+          </Button>
 
-          {/* Content */}
-          <div className="p-6 space-y-8">
+          {/* Scrollable content */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-8">
+            {/* Staff Name & Role Header */}
+            <div className="pr-10">
+              <h2 className="text-2xl font-bold text-foreground">{staff.name}</h2>
+              <div className="flex flex-wrap items-center gap-3 mt-2">
+                <span className="text-primary font-semibold">
+                  {typeof staff.rank === 'object' ? staff.rank?.name : staff.rank || 'N/A'}
+                </span>
+                {staff.lgaId && (
+                  <span className="text-sm text-muted-foreground flex items-center gap-1">
+                    <MapPin className="w-3 h-3" />
+                    {typeof staff.lga === 'object' ? staff.lga?.name : staff.lgaId}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Overview Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="bg-muted/30 rounded-lg p-3">
+                <p className="text-xs text-muted-foreground flex items-center gap-1 mb-1"><Hash className="w-3 h-3" /> Serial No.</p>
+                <p className="font-medium text-sm">{(staff as any).serialNumber || 'N/A'}</p>
+              </div>
+              <div className="bg-muted/30 rounded-lg p-3">
+                <p className="text-xs text-muted-foreground flex items-center gap-1 mb-1"><User className="w-3 h-3" /> Sex</p>
+                <p className="font-medium text-sm">{staff.sex || 'N/A'}</p>
+              </div>
+              <div className="bg-muted/30 rounded-lg p-3">
+                <p className="text-xs text-muted-foreground flex items-center gap-1 mb-1"><Briefcase className="w-3 h-3" /> Status</p>
+                <p className="font-medium text-sm">{typeof staff.status === 'object' ? staff.status.name : staff.status || 'N/A'}</p>
+              </div>
+              <div className="bg-muted/30 rounded-lg p-3">
+                <p className="text-xs text-muted-foreground flex items-center gap-1 mb-1"><Award className="w-3 h-3" /> SGL</p>
+                <p className="font-medium text-sm">{(staff as any).sgl || 'N/A'}</p>
+              </div>
+            </div>
+
             {/* Contact Information */}
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+            <div>
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                 <Mail className="w-5 h-5 text-primary" />
                 Contact Information
@@ -222,53 +224,70 @@ export default function StaffDetailModal({ staff, onClose, onUpdate, onEdit }: S
                   <p className="font-medium">{staff.dateOfBirth ? new Date(staff.dateOfBirth).toLocaleDateString() : 'N/A'}</p>
                 </div>
               </div>
-            </motion.div>
+            </div>
 
             {/* Employment Details */}
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+            <div>
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                 <Briefcase className="w-5 h-5 text-primary" />
                 Employment Details
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="bg-muted/30 rounded-lg p-4">
-                  <p className="text-sm text-muted-foreground">Status</p>
-                  <p className="font-medium">{typeof staff.status === 'object' ? staff.status.name : staff.status || "N/A"}</p>
-                </div>
-                <div className="bg-muted/30 rounded-lg p-4">
-                  <p className="text-sm text-muted-foreground">Position</p>
-                  <p className="font-medium text-sm">{typeof staff.rank === 'object' ? staff.rank?.name : staff.rank || "N/A"}</p>
-                </div>
-                <div className="bg-muted/30 rounded-lg p-4">
-                  <p className="text-sm text-muted-foreground">Join Date</p>
+                  <p className="text-sm text-muted-foreground flex items-center gap-1"><Calendar className="w-3 h-3" /> Date of First Appointment</p>
                   <p className="font-medium">{staff.dateOfFirstAppt ? new Date(staff.dateOfFirstAppt).toLocaleDateString() : 'N/A'}</p>
                 </div>
+                <div className="bg-muted/30 rounded-lg p-4">
+                  <p className="text-sm text-muted-foreground flex items-center gap-1"><Calendar className="w-3 h-3" /> Date of Confirmation</p>
+                  <p className="font-medium">{staff.dateOfConf ? new Date(staff.dateOfConf).toLocaleDateString() : 'N/A'}</p>
+                </div>
+                <div className="bg-muted/30 rounded-lg p-4">
+                  <p className="text-sm text-muted-foreground flex items-center gap-1"><Calendar className="w-3 h-3" /> Present Appointment</p>
+                  <p className="font-medium">{staff.dateOfPresentAppt ? new Date(staff.dateOfPresentAppt).toLocaleDateString() : 'N/A'}</p>
+                </div>
               </div>
-            </motion.div>
+              {(staff as any).recommendedRetirementDate && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                  <div className="bg-muted/30 rounded-lg p-4">
+                    <p className="text-sm text-muted-foreground flex items-center gap-1"><Calendar className="w-3 h-3" /> Recommended Retirement</p>
+                    <p className="font-medium">{new Date((staff as any).recommendedRetirementDate).toLocaleDateString()}</p>
+                  </div>
+                  {(staff as any).yearsExperience != null && (
+                    <div className="bg-muted/30 rounded-lg p-4">
+                      <p className="text-sm text-muted-foreground">Years of Experience</p>
+                      <p className="font-medium">{(staff as any).yearsExperience} years</p>
+                    </div>
+                  )}
+                  <div className="bg-muted/30 rounded-lg p-4">
+                    <p className="text-sm text-muted-foreground">Role</p>
+                    <p className="font-medium">{staff.role || 'N/A'}</p>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Certifications */}
             {staff.certifications && staff.certifications.length > 0 && (
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
+              <div>
                 <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                   <Award className="w-5 h-5 text-primary" />
                   Certifications
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   {staff.certifications.map((cert, idx) => (
-                    <motion.span
+                    <span
                       key={idx}
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: 0.3 + idx * 0.05 }}
-                      className="bg-linear-to-r from-primary/20 to-accent/20 text-primary font-medium px-4 py-2 rounded-full text-sm"
+                      className="bg-primary/10 text-primary font-medium px-4 py-2 rounded-full text-sm"
                     >
                       {cert}
-                    </motion.span>
+                    </span>
                   ))}
                 </div>
-              </motion.div>
+              </div>
             )}
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
+
+            {/* Document */}
+            <div>
               <h3 className="text-lg font-semibold mb-4">Document</h3>
               {staff.documentUrl ? (
                 <div className="space-y-4">
@@ -350,19 +369,21 @@ export default function StaffDetailModal({ staff, onClose, onUpdate, onEdit }: S
                 </div>
               )}
               {uploadError && (
-                <motion.p
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="text-sm text-destructive mt-2"
-                >
-                  {uploadError}
-                </motion.p>
+                <p className="text-sm text-destructive mt-2">{uploadError}</p>
               )}
-            </motion.div>
+            </div>
+
+            {/* Remarks */}
+            {(staff as any).remark && (
+              <div>
+                <h3 className="text-lg font-semibold mb-2">Remarks</h3>
+                <p className="text-sm text-muted-foreground bg-muted/30 rounded-lg p-4">{(staff as any).remark}</p>
+              </div>
+            )}
           </div>
 
-          {/* Footer */}
-          <div className="px-6 py-4 border-t border-border/50 bg-muted/5 flex justify-between gap-2">
+          {/* Fixed footer */}
+          <div className="px-6 py-4 border-t border-border/50 bg-muted/5 flex justify-between gap-2 shrink-0">
             <Button
               variant="outline"
               onClick={() => setShowDocumentHistory(true)}
@@ -394,6 +415,10 @@ export default function StaffDetailModal({ staff, onClose, onUpdate, onEdit }: S
                 <Button
                   variant="outline"
                   onClick={() => {
+                    if (!isAdmin) {
+                      toast.error("Only employees with ADMIN user role can create change requests.")
+                      return
+                    }
                     setInitialSelectedFields([])
                     setShowChangeRequest(true)
                   }}
@@ -423,7 +448,7 @@ export default function StaffDetailModal({ staff, onClose, onUpdate, onEdit }: S
             </Button>
           </div>
         </Card>
-      </motion.div>
+      </div>
 
       {/* Change Request Modal */}
       <ChangeRequestModal
@@ -432,7 +457,7 @@ export default function StaffDetailModal({ staff, onClose, onUpdate, onEdit }: S
         staff={staff}
         initialSelectedFields={initialSelectedFields}
         onSuccess={() => {
-          fetchRequestStatus(); // Refetch status after creating a request
+          fetchRequestStatus();
         }}
       />
 
@@ -442,7 +467,6 @@ export default function StaffDetailModal({ staff, onClose, onUpdate, onEdit }: S
         staff={staff}
       />
 
-      {/* Data History Modal */}
       <DataChangeHistoryModal
         open={showDataHistory}
         onClose={() => setShowDataHistory(false)}

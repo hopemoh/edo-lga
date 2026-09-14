@@ -1,46 +1,18 @@
 "use client"
 
-import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { ShieldAlert, Scale, FileWarning, Lock } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import RichTextDisplay from "@/components/ui/rich-text-display"
-
-interface SectionContent {
-    title: string
-    subtitle: string
-    content: string
-}
+import { useContent } from "@/hooks/use-resources"
 
 export default function DisciplineSection() {
-    const [content, setContent] = useState<SectionContent>({
-        title: "Disciplinary Cases & Sanctions",
-        subtitle: "Ethics & Compliance",
-        content: "The Commission handles disciplinary matters with fairness and in accordance with civil service rules. Our processes ensure that all staff adhere to established codes of conduct while protecting the rights of individuals within the Local Government Service."
-    })
-
-    useEffect(() => {
-        fetchContent()
-    }, [])
-
-    const fetchContent = async () => {
-        try {
-            const response = await fetch('/api/content')
-            if (response.ok) {
-                const data = await response.json()
-                const sectionData = data.find((item: SectionContent & { section: string }) => item.section === 'discipline')
-                if (sectionData) {
-                    setContent({
-                        title: sectionData.title,
-                        subtitle: sectionData.subtitle || "Ethics & Compliance",
-                        content: sectionData.content
-                    })
-                }
-            }
-        } catch (error) {
-        }
-    }
+    const { data: contentData } = useContent()
+    const sectionData = contentData?.find((item: any) => item.section === 'discipline')
+    const content = sectionData
+        ? { title: sectionData.title, subtitle: sectionData.subtitle || "Ethics & Compliance", content: sectionData.content }
+        : { title: "Disciplinary Cases & Sanctions", subtitle: "Ethics & Compliance", content: "The Commission handles disciplinary matters with fairness and in accordance with civil service rules. Our processes ensure that all staff adhere to established codes of conduct while protecting the rights of individuals within the Local Government Service." }
 
     const aspects = [
         {

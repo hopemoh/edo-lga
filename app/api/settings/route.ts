@@ -3,6 +3,8 @@ import { db } from "@/lib/db";
 import { systemSettings } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { getTokenFromRequest, verifyToken } from "@/lib/auth";
+import { settingSchema } from "@/lib/validations";
+import { logError } from "@/lib/error-logger";
 
 export async function GET(request: NextRequest) {
   try {
@@ -19,6 +21,14 @@ export async function GET(request: NextRequest) {
     const settings = await db.query.systemSettings.findMany();
     return NextResponse.json(settings);
   } catch (error) {
+    await logError({
+      source: "api/settings",
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      request,
+      userId: user?.id,
+      userRole: user?.role,
+    });
     return NextResponse.json(
       { error: "Couldn't load settings. Please try again." },
       { status: 500 }
@@ -39,14 +49,11 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { key, value, label } = body;
-
-    if (!key || !value) {
-      return NextResponse.json(
-        { error: "key and value are required" },
-        { status: 400 }
-      );
+    const parsed = settingSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
     }
+    const { key, value } = parsed.data;
 
     const existing = await db.query.systemSettings.findFirst({
       where: eq(systemSettings.key, key),
@@ -55,14 +62,13 @@ export async function POST(request: NextRequest) {
     if (existing) {
       await db
         .update(systemSettings)
-        .set({ value, label: label || existing.label, updatedAt: new Date() })
+        .set({ value, updatedAt: new Date() })
         .where(eq(systemSettings.key, key));
     } else {
       await db.insert(systemSettings).values({
         id: crypto.randomUUID(),
         key,
         value,
-        label: label || null,
       });
     }
 
@@ -72,6 +78,14 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(updated);
   } catch (error) {
+    await logError({
+      source: "api/settings",
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      request,
+      userId: user?.id,
+      userRole: user?.role,
+    });
     return NextResponse.json(
       { error: "Couldn't save settings. Please try again." },
       { status: 500 }

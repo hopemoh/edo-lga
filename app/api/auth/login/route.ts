@@ -3,18 +3,17 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { staff, lgas } from "@/lib/db/schema";
 import { generateToken } from "@/lib/auth";
+import { loginSchema } from "@/lib/validations";
+import { logError } from "@/lib/error-logger";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { phoneNumber, dateOfBirth } = body;
-
-    if (!phoneNumber || !dateOfBirth) {
-      return NextResponse.json(
-        { error: "Phone number and date of birth are required" },
-        { status: 400 }
-      );
+    const parsed = loginSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
     }
+    const { phoneNumber, dateOfBirth } = parsed.data;
 
     const staffRecord = await db.query.staff.findFirst({
       where: eq(staff.phoneNumber, phoneNumber),
@@ -70,6 +69,12 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
+    await logError({
+      source: "api/auth/login",
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      request,
+    });
     return NextResponse.json(
       { error: "Something went wrong. Please try again." },
       { status: 500 }

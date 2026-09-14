@@ -3,6 +3,8 @@ import { db } from "@/lib/db";
 import { changeReasons } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { getTokenFromRequest, verifyToken } from "@/lib/auth";
+import { changeReasonSchema } from "@/lib/validations";
+import { logError } from "@/lib/error-logger";
 
 export async function GET() {
   try {
@@ -12,6 +14,11 @@ export async function GET() {
     });
     return NextResponse.json(reasons);
   } catch (error) {
+    await logError({
+      source: "api/change-reasons",
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     return NextResponse.json(
       { error: "Couldn't load change reasons. Please try again." },
       { status: 500 }
@@ -32,11 +39,11 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, requiresDocument } = body;
-
-    if (!name) {
-      return NextResponse.json({ error: "Name is required" }, { status: 400 });
+    const parsed = changeReasonSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
     }
+    const { name, requiresDocument } = parsed.data;
 
     const id = crypto.randomUUID();
     await db.insert(changeReasons).values({
@@ -52,6 +59,14 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(newReason, { status: 201 });
   } catch (error) {
+    await logError({
+      source: "api/change-reasons",
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      request,
+      userId: user?.id,
+      userRole: user?.role,
+    });
     return NextResponse.json(
       { error: "Couldn't save the change reason. Please try again." },
       { status: 500 }

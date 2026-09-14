@@ -5,12 +5,13 @@ import { eq } from "drizzle-orm";
 import { getTokenFromRequest, verifyToken } from "@/lib/auth";
 import {
   canApproveAtLevel,
-  createApprovalLog,
   createAuditLog,
   getNextStatus,
   isWithinCorrectionWindow,
   getCorrectionWindowExpiry,
 } from "@/lib/approval-utils";
+import { approveSchema, rejectSchema, correctSchema } from "@/lib/validations";
+import { logError } from "@/lib/error-logger";
 
 // POST = Approve
 export async function POST(
@@ -29,7 +30,16 @@ export async function POST(
       return NextResponse.json({ error: "You need to log in to access this." }, { status: 401 });
     }
 
+    const currentUser = await db.query.staff.findFirst({
+      where: eq(staff.id, user.id),
+    });
+    const approverName = currentUser?.name || user.name;
+
     const body = await request.json().catch(() => ({}));
+    const parsed = approveSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    }
 
     const changeRequest = await db.query.changeRequests.findFirst({
       where: eq(changeRequests.id, id),
@@ -61,16 +71,19 @@ export async function POST(
 
     if (user.role === "ADMIN") {
       updateData.adminApprovedBy = user.id;
+      updateData.adminApprovedByName = approverName;
       updateData.adminApprovedAt = new Date();
-      updateData.adminApprovedComments = body.comments || null;
+      updateData.adminApprovedComments = parsed.data.comments || null;
     } else if (user.role === "SECRETARY") {
       updateData.secretaryApprovedBy = user.id;
+      updateData.secretaryApprovedByName = approverName;
       updateData.secretaryApprovedAt = new Date();
-      updateData.secretaryApprovedComments = body.comments || null;
+      updateData.secretaryApprovedComments = parsed.data.comments || null;
     } else if (user.role === "CHAIRMAN") {
       updateData.chairmanApprovedBy = user.id;
+      updateData.chairmanApprovedByName = approverName;
       updateData.chairmanApprovedAt = new Date();
-      updateData.chairmanApprovedComments = body.comments || null;
+      updateData.chairmanApprovedComments = parsed.data.comments || null;
     }
 
     if (isFinalApproval) {
@@ -93,23 +106,30 @@ export async function POST(
       }
     }
 
-    await createApprovalLog(id, action, {
-      userId: user.id,
-      userFullName: user.fullName,
-      userRole: user.role,
-      rank: user.role,
-    }, body.comments || undefined);
-
     await createAuditLog(
       isFinalApproval ? "CHANGE_REQUEST_COMPLETED" : action,
-      { userId: user.id, userFullName: user.fullName, userRole: user.role, rank: user.role },
-      { changeRequestId: id, status: updateData.status },
+      { userId: user.id, userFullName: approverName, userRole: user.role as any, rank: user.role },
+      {
+        changeRequestId: id,
+        status: updateData.status,
+        comments: parsed.data.comments || null,
+        selectedFields: changeRequest.selectedFields,
+        changes: changeRequest.changes,
+      },
       id,
       changeRequest.staffId
     );
 
     return NextResponse.json({ success: true, status: updateData.status });
   } catch (error) {
+    await logError({
+      source: "api/change-requests/[id]/approve",
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      request,
+      userId: user?.id,
+      userRole: user?.role,
+    });
     return NextResponse.json(
       { error: "Something went wrong. Please try again." },
       { status: 500 }
@@ -134,12 +154,17 @@ export async function PUT(
       return NextResponse.json({ error: "You need to log in to access this." }, { status: 401 });
     }
 
-    const body = await request.json();
-    const { reason } = body;
+    const currentUser = await db.query.staff.findFirst({
+      where: eq(staff.id, user.id),
+    });
+    const approverName = currentUser?.name || user.name;
 
-    if (!reason?.trim()) {
-      return NextResponse.json({ error: "Please provide a rejection reason." }, { status: 400 });
+    const body = await request.json();
+    const parsed = rejectSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
     }
+    const { reason } = parsed.data;
 
     const changeRequest = await db.query.changeRequests.findFirst({
       where: eq(changeRequests.id, id),
@@ -170,16 +195,9 @@ export async function PUT(
       updatedAt: new Date(),
     }).where(eq(changeRequests.id, id));
 
-    await createApprovalLog(id, action, {
-      userId: user.id,
-      userFullName: user.fullName,
-      userRole: user.role,
-      rank: user.role,
-    }, reason.trim());
-
     await createAuditLog(
       "CHANGE_REQUEST_REJECTED",
-      { userId: user.id, userFullName: user.fullName, userRole: user.role, rank: user.role },
+      { userId: user.id, userFullName: approverName, userRole: user.role as any, rank: user.role },
       { changeRequestId: id, reason: reason.trim() },
       id,
       changeRequest.staffId
@@ -187,6 +205,14 @@ export async function PUT(
 
     return NextResponse.json({ success: true, status: "REJECTED" });
   } catch (error) {
+    await logError({
+      source: "api/change-requests/[id]/approve",
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      request,
+      userId: user?.id,
+      userRole: user?.role,
+    });
     return NextResponse.json(
       { error: "Something went wrong. Please try again." },
       { status: 500 }
@@ -215,12 +241,17 @@ export async function PATCH(
       return NextResponse.json({ error: "You don't have permission to do this." }, { status: 403 });
     }
 
-    const body = await request.json();
-    const { changes, reason } = body;
+    const currentUser = await db.query.staff.findFirst({
+      where: eq(staff.id, user.id),
+    });
+    const approverName = currentUser?.name || user.name;
 
-    if (!changes || Object.keys(changes).length === 0) {
-      return NextResponse.json({ error: "Please provide the corrected values." }, { status: 400 });
+    const body = await request.json();
+    const parsed = correctSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
     }
+    const { changes, reason } = parsed.data;
 
     const changeRequest = await db.query.changeRequests.findFirst({
       where: eq(changeRequests.id, id),
@@ -265,23 +296,24 @@ export async function PATCH(
       await db.update(staff).set(staffUpdate).where(eq(staff.id, changeRequest.staffId));
     }
 
-    await createApprovalLog(id, "ADMIN_CORRECT", {
-      userId: user.id,
-      userFullName: user.fullName,
-      userRole: "ADMIN",
-      rank: "ADMIN",
-    }, reason || "Admin correction within 24-hour window");
-
     await createAuditLog(
       "ADMIN_CORRECTION",
-      { userId: user.id, userFullName: user.fullName, userRole: "ADMIN", rank: "ADMIN" },
-      { changeRequestId: id, correctedFields: Object.keys(changes), changes: mergedChanges },
+      { userId: user.id, userFullName: approverName, userRole: "ADMIN" as any, rank: "ADMIN" },
+      { changeRequestId: id, correctedFields: Object.keys(changes), changes: mergedChanges, reason: reason || "Admin correction within 24-hour window" },
       id,
       changeRequest.staffId
     );
 
     return NextResponse.json({ success: true, status: "ADMIN_CORRECTED" });
   } catch (error) {
+    await logError({
+      source: "api/change-requests/[id]/approve",
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      request,
+      userId: user?.id,
+      userRole: user?.role,
+    });
     return NextResponse.json(
       { error: "Something went wrong. Please try again." },
       { status: 500 }

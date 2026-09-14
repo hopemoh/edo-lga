@@ -1,12 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { FileText, Calendar, User, AlertCircle, Loader, Eye, ArrowRight } from "lucide-react"
 import type { Staff } from "@/lib/types"
+import { useChangeRequests } from "@/hooks/use-change-requests"
 
 interface ChangeRequest {
     id: string
@@ -26,41 +26,8 @@ interface DataChangeHistoryModalProps {
 }
 
 export default function DataChangeHistoryModal({ open, onClose, staff }: DataChangeHistoryModalProps) {
-    const [requests, setRequests] = useState<ChangeRequest[]>([])
-    const [loading, setLoading] = useState(false)
-    const [error, setError] = useState("")
-
-    useEffect(() => {
-        if (open) {
-            fetchHistory()
-        }
-    }, [open, staff.id])
-
-    const fetchHistory = async () => {
-        try {
-            setLoading(true)
-            setError("")
-            const token = localStorage.getItem("token")
-            // Fetch all requests for this staff
-            const response = await fetch(`/api/change-requests?staffId=${staff.id}`, {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-            })
-
-            if (response.ok) {
-                const data = await response.json()
-                // Sort by date descending
-                setRequests(data)
-            } else {
-                setError("Couldn't load history. Please try again.")
-            }
-        } catch (err) {
-            setError("Couldn't load history. Please try again.")
-        } finally {
-            setLoading(false)
-        }
-    }
+    const { data: requests = [], isLoading: loading, error: queryError } = useChangeRequests({ staffId: staff.id })
+    const error = queryError ? "Couldn't load history. Please try again." : ""
 
     const getStatusBadge = (status: string) => {
         const styles: Record<string, string> = {

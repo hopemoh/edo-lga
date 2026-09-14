@@ -1,10 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { ChevronLeft, ChevronRight, X } from "lucide-react"
 import { SignedImage } from "@/components/ui/signed-image"
 import RichTextDisplay from "@/components/ui/rich-text-display"
+import { useLGAs } from "@/hooks/use-lgas"
 
 interface LGA {
   id: string
@@ -25,26 +26,20 @@ interface LGADetailModalProps {
 export default function LGADetailModal({ lga, onClose }: LGADetailModalProps) {
   const [direction, setDirection] = useState(1)
   const [currentLGA, setCurrentLGA] = useState(lga)
-  const [allLGAs, setAllLGAs] = useState<LGA[]>([])
+  const { data: rawData } = useLGAs()
 
-  useEffect(() => {
-    fetch("/api/lgas")
-      .then((res) => res.json())
-      .then((data) => {
-        const formatted = data.map((item: any) => ({
-          id: item.id,
-          name: item.name,
-          description: item.details?.description || "",
-          landmarks: item.details?.landmarks || [],
-          activities: item.details?.activities || [],
-          image: item.details?.image || "",
-          mapX: item.details?.mapX || 0,
-          mapY: item.details?.mapY || 0,
-        }))
-        setAllLGAs(formatted)
-      })
-      .catch(() => {})
-  }, [])
+  const allLGAs: LGA[] = rawData
+    ? rawData.map((item: any) => ({
+        id: item.id,
+        name: item.name,
+        description: item.details?.description || "",
+        landmarks: item.details?.landmarks || [],
+        activities: item.details?.activities || [],
+        image: item.details?.image || "",
+        mapX: item.details?.mapX || 0,
+        mapY: item.details?.mapY || 0,
+      }))
+    : []
 
   const lgaList = allLGAs.length > 0 ? allLGAs : [lga]
   const currentIndex = lgaList.findIndex((item) => item.id === currentLGA.id)

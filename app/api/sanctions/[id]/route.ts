@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { sanctions } from "@/lib/db/schema";
 import { getTokenFromRequest, verifyToken } from "@/lib/auth";
+import { logError } from "@/lib/error-logger";
 
 export async function PUT(
   request: NextRequest,
@@ -58,6 +59,14 @@ export async function PUT(
 
     return NextResponse.json(updated);
   } catch (error) {
+    await logError({
+      source: "api/sanctions/[id]",
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      request,
+      userId: user?.id,
+      userRole: user?.role,
+    });
     return NextResponse.json(
       { error: "Couldn't save the sanction. Please try again." },
       { status: 500 }
@@ -95,6 +104,14 @@ export async function DELETE(
 
     return NextResponse.json({ message: "Sanction deleted" });
   } catch (error) {
+    await logError({
+      source: "api/sanctions/[id]",
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      request,
+      userId: user?.id,
+      userRole: user?.role,
+    });
     return NextResponse.json(
       { error: "Couldn't delete the sanction. Please try again." },
       { status: 500 }

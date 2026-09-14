@@ -1,67 +1,19 @@
 "use client"
 
-import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { Users, Briefcase, Award, Calendar, UserCheck } from "lucide-react"
 import { SignedImage } from "@/components/ui/signed-image"
 import RichTextDisplay from "@/components/ui/rich-text-display"
-
-interface SectionContent {
-    title: string
-    subtitle: string
-    content: string
-}
-
-interface Highlight {
-    id: string
-    title: string
-    subtitle: string
-    description: string
-    image: string | null
-}
+import { useContent, useHighlights } from "@/hooks/use-resources"
 
 export default function AppointmentsSection() {
-    const [content, setContent] = useState<SectionContent>({
-        title: "Confirmation of Appointments",
-        subtitle: "Staff Confirmation",
-        content: "The Commission is responsible for the confirmation of appointments for staff across all Local Government Areas. This process ensures that qualified personnel are confirmed into the Local Government Service after meeting all necessary requirements."
-    })
+    const { data: contentData } = useContent()
+    const { data: highlights } = useHighlights("CONFIRMATION")
 
-    const [highlights, setHighlights] = useState<Highlight[]>([])
-
-    useEffect(() => {
-        fetchContent()
-        fetchHighlights()
-    }, [])
-
-    const fetchContent = async () => {
-        try {
-            const response = await fetch('/api/content')
-            if (response.ok) {
-                const data = await response.json()
-                const sectionData = data.find((item: SectionContent & { section: string }) => item.section === 'appointments')
-                if (sectionData) {
-                    setContent({
-                        title: sectionData.title,
-                        subtitle: sectionData.subtitle || "Staff Confirmation",
-                        content: sectionData.content
-                    })
-                }
-            }
-        } catch (error) {
-        }
-    }
-
-    const fetchHighlights = async () => {
-        try {
-            const response = await fetch('/api/highlights?type=CONFIRMATION')
-            if (response.ok) {
-                const data = await response.json()
-                setHighlights(data)
-            }
-        } catch (error) {
-        }
-    }
+    const sectionData = contentData?.find((item: any) => item.section === 'appointments')
+    const content = sectionData
+        ? { title: sectionData.title, subtitle: sectionData.subtitle || "Staff Confirmation", content: sectionData.content }
+        : { title: "Confirmation of Appointments", subtitle: "Staff Confirmation", content: "The Commission is responsible for the confirmation of appointments for staff across all Local Government Areas. This process ensures that qualified personnel are confirmed into the Local Government Service after meeting all necessary requirements." }
 
     return (
         <section id="appointments" className="py-20 px-4 md:px-8 lg:px-12 bg-muted/30">
@@ -91,7 +43,7 @@ export default function AppointmentsSection() {
                         Recently Confirmed Appointments
                     </h3>
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        {highlights.map((staff, index) => (
+                        {(highlights || []).map((staff: any, index: number) => (
                             <motion.div
                                 key={staff.id}
                                 initial={{ opacity: 0, y: 20 }}

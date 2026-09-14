@@ -1,46 +1,25 @@
 "use client"
 
-import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { Target, Eye } from "lucide-react"
 import RichTextDisplay from "@/components/ui/rich-text-display"
-
-interface SectionContent {
-    title: string
-    subtitle: string
-    content: string
-}
+import { useContent } from "@/hooks/use-resources"
 
 export default function MissionVision() {
-    const [mission, setMission] = useState<SectionContent>({
+    const { data: contentData } = useContent()
+    const missionData = contentData?.find((item: any) => item.section === 'mission')
+    const visionData = contentData?.find((item: any) => item.section === 'vision')
+
+    const mission = missionData || {
         title: "Our Mission",
         subtitle: "Service Excellence",
         content: "To provide a highly motivated, professional and efficient workforce for the Local Government Service through effective recruitment, training, and management, ensuring excellence in service delivery at the grassroots level."
-    })
+    }
 
-    const [vision, setVision] = useState<SectionContent>({
+    const vision = visionData || {
         title: "Our Vision",
         subtitle: "Future Outlook",
         content: "To be a world-class Local Government Service Commission that ensures transparency, accountability, and sustainable development across all 18 Local Government Areas of Edo State."
-    })
-
-    useEffect(() => {
-        fetchContent()
-    }, [])
-
-    const fetchContent = async () => {
-        try {
-            const response = await fetch('/api/content')
-            if (response.ok) {
-                const data = await response.json()
-                const missionData = data.find((item: any) => item.section === 'mission')
-                const visionData = data.find((item: any) => item.section === 'vision')
-
-                if (missionData) setMission(missionData)
-                if (visionData) setVision(visionData)
-            }
-        } catch (error) {
-        }
     }
 
     const items = [

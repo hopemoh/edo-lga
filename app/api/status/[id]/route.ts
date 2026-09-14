@@ -3,6 +3,7 @@ import { eq, count } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { statuses, staff } from "@/lib/db/schema";
 import { getTokenFromRequest, verifyToken } from "@/lib/auth";
+import { logError } from "@/lib/error-logger";
 
 export async function DELETE(
   request: NextRequest,
@@ -50,6 +51,14 @@ export async function DELETE(
 
     return NextResponse.json({ message: "Status deleted" });
   } catch (error) {
+    await logError({
+      source: "api/status/[id]",
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      request,
+      userId: user?.id,
+      userRole: user?.role,
+    });
     return NextResponse.json(
       { error: "Couldn't delete the status. Please try again." },
       { status: 500 }

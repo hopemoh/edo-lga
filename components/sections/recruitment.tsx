@@ -1,44 +1,16 @@
 "use client"
 
-import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { UserPlus, FileText, Users, CheckSquare } from "lucide-react"
 import RichTextDisplay from "@/components/ui/rich-text-display"
-
-interface SectionContent {
-    title: string
-    subtitle: string
-    content: string
-}
+import { useContent } from "@/hooks/use-resources"
 
 export default function RecruitmentSection() {
-    const [content, setContent] = useState<SectionContent>({
-        title: "Staff Recruitment",
-        subtitle: "Building the Workforce",
-        content: "The Commission oversees the recruitment of qualified personnel into the Local Government Service. Our transparent recruitment process ensures that the best candidates are selected to serve the people of Edo State."
-    })
-
-    useEffect(() => {
-        fetchContent()
-    }, [])
-
-    const fetchContent = async () => {
-        try {
-            const response = await fetch('/api/content')
-            if (response.ok) {
-                const data = await response.json()
-                const sectionData = data.find((item: SectionContent & { section: string }) => item.section === 'recruitment')
-                if (sectionData) {
-                    setContent({
-                        title: sectionData.title,
-                        subtitle: sectionData.subtitle || "Building the Workforce",
-                        content: sectionData.content
-                    })
-                }
-            }
-        } catch (error) {
-        }
-    }
+    const { data: contentData } = useContent()
+    const sectionData = contentData?.find((item: any) => item.section === 'recruitment')
+    const content = sectionData
+        ? { title: sectionData.title, subtitle: sectionData.subtitle || "Building the Workforce", content: sectionData.content }
+        : { title: "Staff Recruitment", subtitle: "Building the Workforce", content: "The Commission oversees the recruitment of qualified personnel into the Local Government Service. Our transparent recruitment process ensures that the best candidates are selected to serve the people of Edo State." }
 
     const steps = [
         {

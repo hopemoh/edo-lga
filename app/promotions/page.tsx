@@ -1,10 +1,10 @@
 "use client"
 
-import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { useRouter } from "next/navigation"
 import { TrendingUp, Award, ArrowUpRight, ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useHighlights } from "@/hooks/use-resources"
 
 interface Highlight {
     id: string
@@ -14,26 +14,8 @@ interface Highlight {
 }
 
 export default function PromotionsPage() {
-    const [highlights, setHighlights] = useState<Highlight[]>([])
-    const [loading, setLoading] = useState(true)
     const router = useRouter()
-
-    useEffect(() => {
-        fetchHighlights()
-    }, [])
-
-    const fetchHighlights = async () => {
-        try {
-            const response = await fetch('/api/highlights?type=PROMOTION')
-            if (response.ok) {
-                const data = await response.json()
-                setHighlights(data)
-            }
-        } catch (error) {
-        } finally {
-            setLoading(false)
-        }
-    }
+    const { data: highlights = [], isLoading: loading } = useHighlights("PROMOTION")
 
     return (
         <main className="min-h-screen bg-muted/30">

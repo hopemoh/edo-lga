@@ -11,6 +11,7 @@ import {
   S3_FOLDERS,
   generateS3Key,
 } from "@/lib/s3";
+import { logError } from "@/lib/error-logger";
 
 export async function GET(request: NextRequest) {
   try {
@@ -34,6 +35,12 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(allHighlights);
   } catch (error) {
+    await logError({
+      source: "api/highlights",
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      request,
+    });
     return NextResponse.json(
       { error: "Couldn't load highlights. Please try again." },
       { status: 500 }
@@ -92,6 +99,14 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(newHighlight, { status: 201 });
   } catch (error) {
+    await logError({
+      source: "api/highlights",
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      request,
+      userId: user?.id,
+      userRole: user?.role,
+    });
     return NextResponse.json(
       { error: "Couldn't save the highlight. Please try again." },
       { status: 500 }

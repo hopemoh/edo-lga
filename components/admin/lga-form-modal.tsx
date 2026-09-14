@@ -10,6 +10,13 @@ import { Textarea } from "@/components/ui/textarea"
 import { SignedImage } from "@/components/ui/signed-image"
 import { motion } from "framer-motion"
 import RichTextEditor from "@/components/ui/rich-text-editor"
+import { useLGA, useUpdateLGA } from "@/hooks/use-lgas"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { lgaDetailSchema } from "@/lib/validations"
+import type { z } from "zod"
+
+type LGAFormValues = z.infer<typeof lgaDetailSchema>
 
 interface LGAFormModalProps {
   open: boolean
@@ -29,92 +36,82 @@ export default function LGAFormModal({ open, onClose, onSuccess, lgaId }: LGAFor
     image: null as File | null,
     currentImageUrl: ""
   })
-  const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
+  const { data: lga } = useLGA(lgaId || "")
+  const updateLGA = useUpdateLGA()
+
+  const { register, handleSubmit, formState: { errors }, reset, setValue, watch } = useForm<LGAFormValues>({
+    resolver: zodResolver(lgaDetailSchema),
+    defaultValues: {
+      lgaId: "",
+      description: "",
+    },
+  })
+
   useEffect(() => {
-    if (open && lgaId) {
-      fetchLGAData()
+    if (lga) {
+      const newFormData = {
+        id: lga.id,
+        name: lga.name,
+        zone: lga.zone || "Northern",
+        description: lga.details?.description || "",
+        landmarks: lga.details?.landmarks?.join(", ") || "",
+        activities: lga.details?.activities?.join(", ") || "",
+        image: null,
+        currentImageUrl: lga.details?.image || ""
+      }
+      setFormData(newFormData)
+      reset({
+        lgaId: lga.id,
+        description: newFormData.description,
+      })
     } else if (open && !lgaId) {
-      // Reset form for new LGA
-      setFormData({
+      const empty = {
         id: "", name: "", zone: "Northern", description: "",
         landmarks: "", activities: "",
         image: null, currentImageUrl: ""
-      })
-    }
-  }, [open, lgaId])
-
-  const fetchLGAData = async () => {
-    try {
-      const response = await fetch(`/api/lgas/${lgaId}`)
-      if (response.ok) {
-        const lga = await response.json()
-        setFormData({
-          id: lga.id,
-          name: lga.name,
-          zone: lga.zone || "Northern",
-          description: lga.details?.description || "",
-          landmarks: lga.details?.landmarks?.join(", ") || "",
-          activities: lga.details?.activities?.join(", ") || "",
-          image: null,
-          currentImageUrl: lga.details?.image || ""
-        })
       }
-    } catch (error) {
+      setFormData(empty)
+      reset({ lgaId: "", description: "" })
     }
-  }
+  }, [lga, lgaId, open, reset])
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
+  const handleFormSubmit = (data: LGAFormValues) => {
     setError("")
 
-    try {
-      const token = localStorage.getItem('token')
-      const formDataToSend = new FormData()
+    const formDataToSend = new FormData()
 
-      formDataToSend.append('name', formData.name)
-      formDataToSend.append('zone', formData.zone)
-      formDataToSend.append('description', formData.description)
-      formDataToSend.append('landmarks', formData.landmarks)
-      formDataToSend.append('activities', formData.activities)
+    formDataToSend.append('name', formData.name)
+    formDataToSend.append('zone', formData.zone)
+    formDataToSend.append('description', data.description || "")
+    formDataToSend.append('landmarks', formData.landmarks)
+    formDataToSend.append('activities', formData.activities)
 
-      if (formData.image) {
-        formDataToSend.append('image', formData.image)
-      }
+    if (formData.image) {
+      formDataToSend.append('image', formData.image)
+    }
 
-      const url = lgaId ? `/api/lgas/${lgaId}` : '/api/lgas'
-      const method = lgaId ? 'PUT' : 'POST'
+    if (!lgaId) {
+      formDataToSend.append('id', formData.id.toLowerCase().replace(/\s+/g, '-'))
+    }
 
-      if (!lgaId) {
-        formDataToSend.append('id', formData.id.toLowerCase().replace(/\s+/g, '-'))
-      }
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Authorization': `Bearer ${token}`
+    if (lgaId) {
+      updateLGA.mutate({ id: lgaId, data: formDataToSend }, {
+        onSuccess: () => {
+          setFormData({
+            id: "", name: "", zone: "Northern", description: "",
+            landmarks: "", activities: "",
+            image: null, currentImageUrl: ""
+          })
+          reset()
+          onSuccess()
+          onClose()
         },
-        body: formDataToSend
+        onError: (err: any) => {
+          setError(err.message || "Couldn't save your changes. Please try again.")
+        }
       })
-
-      if (response.ok) {
-        setFormData({
-          id: "", name: "", zone: "Northern", description: "",
-          landmarks: "", activities: "",
-          image: null, currentImageUrl: ""
-        })
-        onSuccess()
-        onClose()
-      } else {
-        const data = await response.json()
-        setError(data.error || "Couldn't save your changes. Please try again.")
-      }
-    } catch (err) {
-      setError("You appear to be offline. Please check your connection.")
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -132,9 +129,11 @@ export default function LGAFormModal({ open, onClose, onSuccess, lgaId }: LGAFor
         <motion.form
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          onSubmit={handleSubmit}
+          onSubmit={handleSubmit(handleFormSubmit)}
           className="space-y-4 antialiased"
         >
+          <input type="hidden" {...register("lgaId")} />
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {!lgaId && (
               <div className="space-y-2">
@@ -146,7 +145,6 @@ export default function LGAFormModal({ open, onClose, onSuccess, lgaId }: LGAFor
                     updateField('name', e.target.value)
                     updateField('id', e.target.value.toLowerCase().replace(/\s+/g, '-'))
                   }}
-                  required
                 />
               </div>
             )}
@@ -158,7 +156,6 @@ export default function LGAFormModal({ open, onClose, onSuccess, lgaId }: LGAFor
                   id="name"
                   value={formData.name}
                   onChange={(e) => updateField('name', e.target.value)}
-                  required
                 />
               </div>
             )}
@@ -221,7 +218,10 @@ export default function LGAFormModal({ open, onClose, onSuccess, lgaId }: LGAFor
             <div className="min-h-[150px]">
               <RichTextEditor
                 value={formData.description}
-                onChange={(value) => updateField('description', value)}
+                onChange={(value) => {
+                  updateField('description', value)
+                  setValue("description", value)
+                }}
                 placeholder="Enter description..."
               />
             </div>
@@ -263,8 +263,8 @@ export default function LGAFormModal({ open, onClose, onSuccess, lgaId }: LGAFor
             <Button type="button" variant="outline" onClick={onClose} className="flex-1">
               Cancel
             </Button>
-            <Button type="submit" disabled={loading} className="flex-1">
-              {loading ? `${lgaId ? 'Updating' : 'Creating'}...` : `${lgaId ? 'Update' : 'Create'} LGA`}
+            <Button type="submit" disabled={updateLGA.isPending} className="flex-1">
+              {updateLGA.isPending ? `${lgaId ? 'Updating' : 'Creating'}...` : `${lgaId ? 'Update' : 'Create'} LGA`}
             </Button>
           </div>
         </motion.form>

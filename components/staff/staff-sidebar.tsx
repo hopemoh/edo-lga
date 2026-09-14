@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useLGAs } from "@/hooks/use-lgas"
 import { Input } from "@/components/ui/input"
 import {
   Sidebar,
@@ -27,8 +28,7 @@ interface StaffSidebarProps {
 export default function StaffSidebar({ selectedLGA, onSelect, isAdmin = false }: StaffSidebarProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [currentUser, setCurrentUser] = useState<any>(null)
-  const [lgas, setLgas] = useState<LGA[]>([])
-  const [loading, setLoading] = useState(true)
+  const lgasQuery = useLGAs()
 
   useEffect(() => {
     const user = localStorage.getItem("currentUser")
@@ -37,27 +37,8 @@ export default function StaffSidebar({ selectedLGA, onSelect, isAdmin = false }:
     }
   }, [])
 
-  // Fetch LGAs from database
-  useEffect(() => {
-    const fetchLGAs = async () => {
-      try {
-        const token = localStorage.getItem('token')
-        const response = await fetch('/api/lgas', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        })
-        if (response.ok) {
-          const data = await response.json()
-          setLgas(data)
-        }
-      } catch (error) {
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchLGAs()
-  }, [])
+  const lgas = lgasQuery.data ?? []
+  const loading = lgasQuery.isLoading
 
   const filteredLGAs = lgas.filter(
     (lga) =>

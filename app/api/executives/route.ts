@@ -11,6 +11,8 @@ import {
   S3_FOLDERS,
   generateS3Key,
 } from "@/lib/s3";
+import { executiveSchema } from "@/lib/validations";
+import { logError } from "@/lib/error-logger";
 
 export async function GET() {
   try {
@@ -20,6 +22,11 @@ export async function GET() {
       .orderBy(asc(executives.order));
     return NextResponse.json(allExecutives);
   } catch (error) {
+    await logError({
+      source: "api/executives",
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     return NextResponse.json(
       { error: "Couldn't load executives. Please try again." },
       { status: 500 }
@@ -43,14 +50,13 @@ export async function POST(request: NextRequest) {
     const name = formData.get("name") as string;
     const role = formData.get("role") as string;
     const order = formData.get("order") as string;
-    const imageFile = formData.get("image") as File | null;
 
-    if (!name || !role) {
-      return NextResponse.json(
-        { error: "Name and role are required" },
-        { status: 400 }
-      );
+    const parsed = executiveSchema.safeParse({ name, role, order: order ? parseInt(order) : undefined });
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
     }
+
+    const imageFile = formData.get("image") as File | null;
 
     let imageUrl: string | null = null;
     if (imageFile && imageFile.size > 0) {
@@ -74,6 +80,14 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(newExecutive, { status: 201 });
   } catch (error) {
+    await logError({
+      source: "api/executives",
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      request,
+      userId: user?.id,
+      userRole: user?.role,
+    });
     return NextResponse.json(
       { error: "Couldn't save the executive. Please try again." },
       { status: 500 }

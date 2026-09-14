@@ -11,7 +11,15 @@ import { Badge } from "@/components/ui/badge"
 import { AlertCircle, Lock } from "lucide-react"
 import { motion } from "framer-motion"
 import type { Staff } from "@/lib/types"
+import { useLGAs } from "@/hooks/use-lgas"
+import { useStatuses, useRanks } from "@/hooks/use-resources"
+import { useUpdateStaff } from "@/hooks/use-staff"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { staffUpdateSchema } from "@/lib/validations"
+import type { z } from "zod"
 
+type StaffEditFormValues = z.infer<typeof staffUpdateSchema>
 type Role = "STAFF" | "ADMIN" | "SECRETARY" | "CHAIRMAN"
 
 interface StaffEditModalProps {
@@ -19,22 +27,7 @@ interface StaffEditModalProps {
   onClose: () => void
   onSuccess: () => void
   staffToEdit: Staff
-  changeRequestId?: string // If editing based on approved change request
-}
-
-interface LGA {
-  id: string
-  name: string
-}
-
-interface Status {
-  id: string
-  name: string
-}
-
-interface Rank {
-  id: string
-  name: string
+  changeRequestId?: string
 }
 
 interface ChangeRequest {
@@ -47,169 +40,122 @@ interface ChangeRequest {
   status: string
 }
 
-export default function StaffEditModal({ 
-  open, 
-  onClose, 
-  onSuccess, 
-  staffToEdit, 
-  changeRequestId 
+export default function StaffEditModal({
+  open,
+  onClose,
+  onSuccess,
+  staffToEdit,
+  changeRequestId
 }: StaffEditModalProps) {
-  const [formData, setFormData] = useState({
-    name: "",
-    sex: "M",
-    lgaId: "",
-    statusId: "",
-    rankId: "",
-    sgl: "",
-    dateOfBirth: "",
-    dateOfFirstAppt: "",
-    dateOfConf: "",
-    dateOfPresentAppt: "",
-    phoneNumber: "",
-    recommendedRetirementDate: "",
-    remark: "",
-    role: "STAFF" as Role
-  })
-
-  const [lgas, setLgas] = useState<LGA[]>([])
-  const [statuses, setStatuses] = useState<Status[]>([])
-  const [ranks, setRanks] = useState<Rank[]>([])
   const [changeRequest, setChangeRequest] = useState<ChangeRequest | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
+  const { data: lgas = [] } = useLGAs()
+  const { data: statuses = [] } = useStatuses()
+  const { data: ranks = [] } = useRanks()
+  const updateMutation = useUpdateStaff()
+
+  const { register, handleSubmit, formState: { errors }, reset, setValue, watch } = useForm<StaffEditFormValues>({
+    resolver: zodResolver(staffUpdateSchema),
+    defaultValues: {
+      name: "",
+      sex: "M",
+      lgaId: "",
+      statusId: "",
+      phoneNumber: "",
+      sgl: 1,
+      dateOfBirth: "",
+      dateOfFirstAppt: "",
+      dateOfConf: "",
+      dateOfPresentAppt: "",
+    },
+  })
+
   const editableFields = changeRequest?.selectedFields || []
   const isFieldEditable = (fieldName: string) => {
-    if (!changeRequestId) return true // If no change request, all fields editable
+    if (!changeRequestId) return true
     return editableFields.includes(fieldName)
   }
 
   useEffect(() => {
     if (open) {
-      fetchData()
       initializeFormData()
+      if (changeRequestId) {
+        fetchChangeRequest()
+      }
     }
   }, [open, staffToEdit, changeRequestId])
 
-  const fetchData = async () => {
+  const fetchChangeRequest = async () => {
     try {
       const token = localStorage.getItem('token')
-      
-      // Fetch reference data
-      await Promise.all([
-        fetchLgas(),
-        fetchStatuses(),
-        fetchRanks()
-      ])
-
-      // Fetch change request if provided
-      if (changeRequestId) {
-        const response = await fetch(`/api/change-requests/${changeRequestId}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        })
-        if (response.ok) {
-          const data = await response.json()
-          setChangeRequest(data)
-        }
+      const response = await fetch(`/api/change-requests/${changeRequestId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setChangeRequest(data)
       }
     } catch (error) {
     }
   }
 
   const initializeFormData = () => {
-    setFormData({
+    const defaultVals = {
       name: staffToEdit.name || "",
-      sex: staffToEdit.sex || "M",
+      sex: (staffToEdit.sex || "M") as "M" | "F",
       lgaId: staffToEdit.lga?.id || staffToEdit.lgaId || "",
       statusId: (staffToEdit.status as any)?.id || "",
-      rankId: (staffToEdit.rank as any)?.id || "",
-      sgl: staffToEdit.sgl?.toString() || "",
+      phoneNumber: staffToEdit.phoneNumber || "",
+      sgl: staffToEdit.sgl || 1,
       dateOfBirth: staffToEdit.dateOfBirth ? new Date(staffToEdit.dateOfBirth).toISOString().split('T')[0] : "",
       dateOfFirstAppt: staffToEdit.dateOfFirstAppt ? new Date(staffToEdit.dateOfFirstAppt).toISOString().split('T')[0] : "",
       dateOfConf: staffToEdit.dateOfConf ? new Date(staffToEdit.dateOfConf).toISOString().split('T')[0] : "",
       dateOfPresentAppt: staffToEdit.dateOfPresentAppt ? new Date(staffToEdit.dateOfPresentAppt).toISOString().split('T')[0] : "",
-      phoneNumber: staffToEdit.phoneNumber || "",
       recommendedRetirementDate: staffToEdit.recommendedRetirementDate ? new Date(staffToEdit.recommendedRetirementDate).toISOString().split('T')[0] : "",
       remark: staffToEdit.remark || "",
-      role: staffToEdit.role || "STAFF"
-    })
-  }
-
-  const fetchLgas = async () => {
-    try {
-      const response = await fetch('/api/lgas')
-      if (response.ok) {
-        const data = await response.json()
-        setLgas(data)
-      }
-    } catch (err) {
     }
+    reset(defaultVals)
   }
 
-  const fetchStatuses = async () => {
-    try {
-      const response = await fetch('/api/status')
-      if (response.ok) {
-        const data = await response.json()
-        setStatuses(data)
-      }
-    } catch (err) {
-    }
-  }
-
-  const fetchRanks = async () => {
-    try {
-      const response = await fetch('/api/ranks')
-      if (response.ok) {
-        const data = await response.json()
-        setRanks(data)
-      }
-    } catch (err) {
-    }
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const onSubmit = (data: StaffEditFormValues) => {
     setLoading(true)
     setError("")
 
     try {
-      const token = localStorage.getItem('token')
-
-      // If editing based on change request, only send changed fields
-      let updateData = { ...formData }
+      let updateData = { ...data }
       if (changeRequestId && changeRequest) {
-        updateData = {}
+        updateData = {} as any
         editableFields.forEach(field => {
           if (field === 'status') {
-            updateData.statusId = formData.statusId
+            (updateData as any).statusId = data.statusId
           } else if (field === 'rank') {
-            updateData.rankId = formData.rankId
+            (updateData as any).rankId = (data as any).rankId
           } else {
-            updateData[field] = formData[field]
+            (updateData as any)[field] = (data as any)[field]
           }
         })
       }
 
-      const response = await fetch(`/api/staff/${staffToEdit.id}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+      updateMutation.mutate(
+        {
+          id: staffToEdit.id,
+          data: {
+            ...updateData,
+            changeRequestId
+          }
         },
-        body: JSON.stringify({
-          ...updateData,
-          changeRequestId // Include change request ID to mark it as completed
-        })
-      })
-
-      if (response.ok) {
-        onSuccess()
-        onClose()
-      } else {
-        const data = await response.json()
-        setError(data.error || "Couldn't save your changes. Please try again.")
-      }
+        {
+          onSuccess: () => {
+            onSuccess()
+            onClose()
+          },
+          onError: (err: any) => {
+            setError(err.message || "Couldn't save your changes. Please try again.")
+          },
+        }
+      )
     } catch (err) {
       setError("You appear to be offline. Please check your connection.")
     } finally {
@@ -225,6 +171,7 @@ export default function StaffEditModal({
   ) => {
     const editable = isFieldEditable(fieldName)
     const isHighlighted = changeRequestId && editable
+    const fieldError = (errors as any)[fieldName]
 
     return (
       <div className={`space-y-2 ${isHighlighted ? 'p-3 bg-blue-50 border border-blue-200 rounded-lg' : ''}`}>
@@ -233,32 +180,30 @@ export default function StaffEditModal({
           {isHighlighted && <Badge variant="secondary" className="text-xs">Editable</Badge>}
           {!editable && changeRequestId && <Lock className="w-3 h-3 text-muted-foreground" />}
         </Label>
-        
+
         {type === 'text' && (
           <Input
             id={fieldName}
-            value={formData[fieldName] || ''}
-            onChange={(e) => setFormData(prev => ({ ...prev, [fieldName]: e.target.value }))}
+            {...register(fieldName as any)}
             disabled={!editable}
             className={!editable ? 'bg-muted cursor-not-allowed' : ''}
           />
         )}
-        
+
         {type === 'date' && (
           <Input
             id={fieldName}
             type="date"
-            value={formData[fieldName] || ''}
-            onChange={(e) => setFormData(prev => ({ ...prev, [fieldName]: e.target.value }))}
+            {...register(fieldName as any)}
             disabled={!editable}
             className={!editable ? 'bg-muted cursor-not-allowed' : ''}
           />
         )}
-        
+
         {type === 'select' && (
-          <Select 
-            value={formData[fieldName]} 
-            onValueChange={(value) => setFormData(prev => ({ ...prev, [fieldName]: value }))}
+          <Select
+            value={watch(fieldName as any) || ""}
+            onValueChange={(value) => setValue(fieldName as any, value)}
             disabled={!editable}
           >
             <SelectTrigger className={!editable ? 'bg-muted cursor-not-allowed' : ''}>
@@ -273,16 +218,19 @@ export default function StaffEditModal({
             </SelectContent>
           </Select>
         )}
-        
+
         {type === 'textarea' && (
           <Textarea
             id={fieldName}
-            value={formData[fieldName] || ''}
-            onChange={(e) => setFormData(prev => ({ ...prev, [fieldName]: e.target.value }))}
+            {...register(fieldName as any)}
             disabled={!editable}
             className={!editable ? 'bg-muted cursor-not-allowed' : ''}
             rows={3}
           />
+        )}
+
+        {fieldError && (
+          <p className="text-sm text-destructive">{fieldError.message}</p>
         )}
       </div>
     )
@@ -309,7 +257,7 @@ export default function StaffEditModal({
               <div className="text-blue-900">
                 <p className="font-semibold">Selective Field Editing</p>
                 <p className="text-xs mt-1">
-                  Only highlighted fields can be edited based on the approved change request. 
+                  Only highlighted fields can be edited based on the approved change request.
                   Other fields are locked to maintain data integrity.
                 </p>
               </div>
@@ -320,7 +268,7 @@ export default function StaffEditModal({
         <motion.form
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          onSubmit={handleSubmit}
+          onSubmit={handleSubmit(onSubmit)}
           className="space-y-6"
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -339,19 +287,10 @@ export default function StaffEditModal({
             {/* Employment Details */}
             <div className="space-y-4">
               <h3 className="font-semibold text-lg">Employment Details</h3>
-              {renderField('statusId', 'Status', 'select', 
-                statuses.map(s => ({ value: s.id, label: s.name }))
-              )}
-              {renderField('rankId', 'Rank', 'select', 
-                ranks.map(r => ({ value: r.id, label: r.name }))
+              {renderField('statusId', 'Status', 'select',
+                statuses.map((s: any) => ({ value: s.id, label: s.name }))
               )}
               {renderField('sgl', 'SGL')}
-              {renderField('role', 'Role', 'select', [
-                { value: 'STAFF', label: 'Staff' },
-                { value: 'ADMIN', label: 'Admin' },
-                { value: 'SECRETARY', label: 'Secretary' },
-                { value: 'CHAIRMAN', label: 'Chairman' }
-              ])}
             </div>
           </div>
 

@@ -3,6 +3,9 @@ import { db } from "@/lib/db";
 import { changeRequests, staff, changeReasons } from "@/lib/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { getTokenFromRequest, verifyToken } from "@/lib/auth";
+import { changeRequestSchema } from "@/lib/validations";
+import { createAuditLog } from "@/lib/approval-utils";
+import { logError } from "@/lib/error-logger";
 
 export async function GET(request: NextRequest) {
   try {
@@ -35,6 +38,14 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(requests);
   } catch (error) {
+    await logError({
+      source: "api/change-requests",
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      request,
+      userId: user?.id,
+      userRole: user?.role,
+    });
     return NextResponse.json(
       { error: "Couldn't load change requests. Please try again." },
       { status: 500 }
@@ -50,29 +61,24 @@ export async function POST(request: NextRequest) {
     }
 
     const user = verifyToken(token);
-    if (!["ADMIN", "SECRETARY", "CHAIRMAN"].includes(user.role)) {
-      return NextResponse.json({ error: "You don't have permission to do this." }, { status: 403 });
+    if (!user || user.role !== "ADMIN") {
+      return NextResponse.json({ error: "Only employees with ADMIN user role can create change requests." }, { status: 403 });
     }
 
     const body = await request.json();
+    const parsed = changeRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    }
     const {
       staffId,
       type,
       changes,
-      oldValues,
       reason,
       reasonId,
       selectedFields,
       supportingDocumentUrl,
-      adminNote,
-    } = body;
-
-    if (!staffId || !changes || !reason) {
-      return NextResponse.json(
-        { error: "staffId, changes, and reason are required" },
-        { status: 400 }
-      );
-    }
+    } = parsed.data;
 
     // Validate reason if reasonId provided
     if (reasonId) {
@@ -106,18 +112,32 @@ export async function POST(request: NextRequest) {
       type: type || "DATA",
       requestedBy: user.id,
       changes,
-      oldValues: oldValues || null,
+      oldValues: null,
       reason,
       status: "ADMIN_APPROVED",
       selectedFields: selectedFields || null,
       reasonId: reasonId || null,
       supportingDocumentUrl: supportingDocumentUrl || null,
-      adminNote: adminNote || null,
+      adminNote: null,
       adminApprovedBy: user.id,
+      adminApprovedByName: user.name,
       adminApprovedAt: createdAt,
       isAdminCorrectable: true,
       correctionWindowExpiresAt: new Date(createdAt.getTime() + 24 * 60 * 60 * 1000),
     });
+
+    const currentUser = await db.query.staff.findFirst({
+      where: eq(staff.id, user.id),
+    });
+    const creatorName = currentUser?.name || user.name;
+
+    await createAuditLog(
+      "CHANGE_REQUEST_CREATED",
+      { userId: user.id, userFullName: creatorName, userRole: user.role as any, rank: user.role },
+      { changeRequestId: id, status: "ADMIN_APPROVED", reason, selectedFields },
+      id,
+      staffId
+    );
 
     const newRequest = await db.query.changeRequests.findFirst({
       where: eq(changeRequests.id, id),
@@ -126,6 +146,14 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(newRequest, { status: 201 });
   } catch (error) {
+    await logError({
+      source: "api/change-requests",
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      request,
+      userId: user?.id,
+      userRole: user?.role,
+    });
     return NextResponse.json(
       { error: "Couldn't submit your change request. Please try again." },
       { status: 500 }

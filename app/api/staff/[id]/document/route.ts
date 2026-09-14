@@ -8,6 +8,7 @@ import {
   generateS3Key,
   S3_FOLDERS,
 } from "@/lib/s3";
+import { logError } from "@/lib/error-logger";
 
 function generateId(): string {
   return crypto.randomUUID();
@@ -71,6 +72,14 @@ export async function POST(
 
     return NextResponse.json({ documentUrl, message: "Document uploaded successfully" });
   } catch (error) {
+    await logError({
+      source: "api/staff/[id]/document",
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      request,
+      userId: user?.id,
+      userRole: user?.role,
+    });
     return NextResponse.json(
       { error: "Document upload failed. Please check your connection and try again." },
       { status: 500 }

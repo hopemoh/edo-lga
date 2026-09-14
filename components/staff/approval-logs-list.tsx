@@ -1,10 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { motion } from "framer-motion"
 import { Clock, User, CheckCircle, XCircle, AlertCircle } from "lucide-react"
+import { useApprovalLogs } from "@/hooks/use-resources"
 
 interface ApprovalLog {
     id: string
@@ -31,42 +32,13 @@ interface ApprovalLogsListProps {
 }
 
 export default function ApprovalLogsList({ isAdmin = false }: ApprovalLogsListProps) {
-    const [logs, setLogs] = useState<ApprovalLog[]>([])
-    const [loading, setLoading] = useState(false)
-    const [error, setError] = useState("")
-    const [total, setTotal] = useState(0)
     const [limit] = useState(50)
     const [offset, setOffset] = useState(0)
 
-    useEffect(() => {
-        if (isAdmin) {
-            fetchApprovalLogs()
-        }
-    }, [isAdmin, offset])
-
-    const fetchApprovalLogs = async () => {
-        setLoading(true)
-        try {
-            const token = localStorage.getItem('token')
-            const response = await fetch(`/api/approval-logs?limit=${limit}&offset=${offset}`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            })
-
-            if (response.ok) {
-                const data = await response.json()
-                setLogs(data.data)
-                setTotal(data.total)
-            } else {
-                setError("Couldn't load approval logs. Please try again.")
-            }
-        } catch (err) {
-            setError("You appear to be offline. Please check your connection.")
-        } finally {
-            setLoading(false)
-        }
-    }
+    const { data, isLoading: loading, error: queryError } = useApprovalLogs({ limit, offset })
+    const logs = data?.data ?? []
+    const total = data?.total ?? 0
+    const error = queryError ? "Couldn't load approval logs. Please try again." : ""
 
     const getActionIcon = (action: string) => {
         switch (action) {

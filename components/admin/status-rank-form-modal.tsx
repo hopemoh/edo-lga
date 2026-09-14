@@ -1,13 +1,16 @@
 "use client"
 
-import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Trash2, Plus } from "lucide-react"
 import { motion } from "framer-motion"
+import { useStatuses, useCreateStatus, useDeleteStatus, useRanks, useCreateRank, useDeleteRank, useQualifications, useCreateQualification, useDeleteQualification } from "@/hooks/use-resources"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { statusSchema, rankSchema, qualificationSchema } from "@/lib/validations"
+import type { z } from "zod"
 
 interface StatusRankFormModalProps {
   open: boolean
@@ -16,181 +19,78 @@ interface StatusRankFormModalProps {
 }
 
 export default function StatusRankFormModal({ open, onClose, onSuccess }: StatusRankFormModalProps) {
-  const [statuses, setStatuses] = useState<any[]>([])
-  const [ranks, setRanks] = useState<any[]>([])
-  const [qualifications, setQualifications] = useState<any[]>([])
-  const [newStatus, setNewStatus] = useState("")
-  const [newRank, setNewRank] = useState("")
-  const [newQualification, setNewQualification] = useState("")
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState("")
+  const { data: statuses = [] } = useStatuses()
+  const { data: ranks = [] } = useRanks()
+  const { data: qualifications = [] } = useQualifications()
 
-  useEffect(() => {
-    if (open) {
-      fetchData()
-    }
-  }, [open])
+  const createStatus = useCreateStatus()
+  const deleteStatus = useDeleteStatus()
+  const createRank = useCreateRank()
+  const deleteRank = useDeleteRank()
+  const createQualification = useCreateQualification()
+  const deleteQualification = useDeleteQualification()
 
-  const fetchData = async () => {
-    try {
-      const [statusRes, rankRes, qualRes] = await Promise.all([
-        fetch('/api/status'),
-        fetch('/api/ranks'),
-        fetch('/api/qualifications')
-      ])
+  const statusForm = useForm<z.infer<typeof statusSchema>>({
+    resolver: zodResolver(statusSchema),
+    defaultValues: { name: "" },
+  })
 
-      if (statusRes.ok) setStatuses(await statusRes.json())
-      if (rankRes.ok) setRanks(await rankRes.json())
-      if (qualRes.ok) setQualifications(await qualRes.json())
-    } catch (error) {
-    }
+  const rankForm = useForm<z.infer<typeof rankSchema>>({
+    resolver: zodResolver(rankSchema),
+    defaultValues: { name: "" },
+  })
+
+  const qualificationForm = useForm<z.infer<typeof qualificationSchema>>({
+    resolver: zodResolver(qualificationSchema),
+    defaultValues: { name: "" },
+  })
+
+  const addStatus = statusForm.handleSubmit((data) => {
+    createStatus.mutate({ name: data.name.trim() }, {
+      onSuccess: () => {
+        statusForm.reset()
+        onSuccess()
+      },
+    })
+  })
+
+  const addRank = rankForm.handleSubmit((data) => {
+    createRank.mutate({ name: data.name.trim() }, {
+      onSuccess: () => {
+        rankForm.reset()
+        onSuccess()
+      },
+    })
+  })
+
+  const addQualification = qualificationForm.handleSubmit((data) => {
+    createQualification.mutate({ name: data.name.trim() }, {
+      onSuccess: () => {
+        qualificationForm.reset()
+        onSuccess()
+      },
+    })
+  })
+
+  const handleDeleteStatus = (id: string) => {
+    deleteStatus.mutate(id, {
+      onSuccess: () => onSuccess(),
+      onError: () => alert("Couldn't save your changes. Please try again.")
+    })
   }
 
-  const addStatus = async () => {
-    if (!newStatus.trim()) return
-
-    setLoading(true)
-    try {
-      const token = localStorage.getItem('token')
-      const response = await fetch('/api/status', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ name: newStatus.trim() })
-      })
-
-      if (response.ok) {
-        setNewStatus("")
-        fetchData()
-      } else {
-        const data = await response.json()
-        setError(data.error || "Couldn't save your changes. Please try again.")
-      }
-    } catch (err) {
-      setError("You appear to be offline. Please check your connection.")
-    } finally {
-      setLoading(false)
-    }
+  const handleDeleteRank = (id: string) => {
+    deleteRank.mutate(id, {
+      onSuccess: () => onSuccess(),
+      onError: () => alert("Couldn't save your changes. Please try again.")
+    })
   }
 
-  const addRank = async () => {
-    if (!newRank.trim()) return
-
-    setLoading(true)
-    try {
-      const token = localStorage.getItem('token')
-      const response = await fetch('/api/ranks', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ name: newRank.trim() })
-      })
-
-      if (response.ok) {
-        setNewRank("")
-        fetchData()
-      } else {
-        const data = await response.json()
-        setError(data.error || "Couldn't save your changes. Please try again.")
-      }
-    } catch (err) {
-      setError("You appear to be offline. Please check your connection.")
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const deleteStatus = async (id: string) => {
-    try {
-      const token = localStorage.getItem('token')
-      const response = await fetch(`/api/status/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-      
-      if (!response.ok) {
-        const errorData = await response.json()
-        alert(errorData.error || "Couldn't save your changes. Please try again.")
-        return
-      }
-      
-      if (response.ok) fetchData()
-    } catch (error) {
-      alert("Couldn't save your changes. Please try again.")
-    }
-  }
-
-  const deleteRank = async (id: string) => {
-    try {
-      const token = localStorage.getItem('token')
-      const response = await fetch(`/api/ranks/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-      
-      if (!response.ok) {
-        const errorData = await response.json()
-        alert(errorData.error || "Couldn't save your changes. Please try again.")
-        return
-      }
-      
-      if (response.ok) fetchData()
-    } catch (error) {
-      alert("Couldn't save your changes. Please try again.")
-    }
-  }
-
-  const addQualification = async () => {
-    if (!newQualification.trim()) return
-
-    setLoading(true)
-    try {
-      const token = localStorage.getItem('token')
-      const response = await fetch('/api/qualifications', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ name: newQualification.trim() })
-      })
-
-      if (response.ok) {
-        setNewQualification("")
-        fetchData()
-      } else {
-        const data = await response.json()
-        setError(data.error || "Couldn't save your changes. Please try again.")
-      }
-    } catch (err) {
-      setError("You appear to be offline. Please check your connection.")
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const deleteQualification = async (id: string) => {
-    try {
-      const token = localStorage.getItem('token')
-      const response = await fetch(`/api/qualifications/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-      
-      if (!response.ok) {
-        const errorData = await response.json()
-        alert(errorData.error || "Couldn't save your changes. Please try again.")
-        return
-      }
-      
-      if (response.ok) fetchData()
-    } catch (error) {
-      alert("Couldn't save your changes. Please try again.")
-    }
+  const handleDeleteQualification = (id: string) => {
+    deleteQualification.mutate(id, {
+      onSuccess: () => onSuccess(),
+      onError: () => alert("Couldn't save your changes. Please try again.")
+    })
   }
 
   return (
@@ -208,21 +108,24 @@ export default function StatusRankFormModal({ open, onClose, onSuccess }: Status
           </TabsList>
 
           <TabsContent value="status" className="space-y-4">
-            <div className="flex gap-2">
-              <Input
-                placeholder="Enter new status"
-                value={newStatus}
-                onChange={(e) => setNewStatus(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && addStatus()}
-              />
-              <Button onClick={addStatus} disabled={loading || !newStatus.trim()}>
+            <form onSubmit={addStatus} className="flex gap-2">
+              <div className="flex-1 space-y-1">
+                <Input
+                  placeholder="Enter new status"
+                  {...statusForm.register("name")}
+                />
+                {statusForm.formState.errors.name && (
+                  <p className="text-sm text-destructive">{statusForm.formState.errors.name.message}</p>
+                )}
+              </div>
+              <Button type="submit" disabled={createStatus.isPending}>
                 <Plus className="w-4 h-4 mr-2" />
                 Add
               </Button>
-            </div>
+            </form>
 
             <div className="space-y-2 max-h-60 overflow-y-auto">
-              {statuses.map((status) => (
+              {statuses.map((status: any) => (
                 <motion.div
                   key={status.id}
                   initial={{ opacity: 0, x: -10 }}
@@ -233,7 +136,7 @@ export default function StatusRankFormModal({ open, onClose, onSuccess }: Status
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => deleteStatus(status.id)}
+                    onClick={() => handleDeleteStatus(status.id)}
                     className="text-destructive hover:text-destructive"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -244,21 +147,24 @@ export default function StatusRankFormModal({ open, onClose, onSuccess }: Status
           </TabsContent>
 
           <TabsContent value="ranks" className="space-y-4">
-            <div className="flex gap-2">
-              <Input
-                placeholder="Enter new rank"
-                value={newRank}
-                onChange={(e) => setNewRank(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && addRank()}
-              />
-              <Button onClick={addRank} disabled={loading || !newRank.trim()}>
+            <form onSubmit={addRank} className="flex gap-2">
+              <div className="flex-1 space-y-1">
+                <Input
+                  placeholder="Enter new rank"
+                  {...rankForm.register("name")}
+                />
+                {rankForm.formState.errors.name && (
+                  <p className="text-sm text-destructive">{rankForm.formState.errors.name.message}</p>
+                )}
+              </div>
+              <Button type="submit" disabled={createRank.isPending}>
                 <Plus className="w-4 h-4 mr-2" />
                 Add
               </Button>
-            </div>
+            </form>
 
             <div className="space-y-2 max-h-60 overflow-y-auto">
-              {ranks.map((rank) => (
+              {ranks.map((rank: any) => (
                 <motion.div
                   key={rank.id}
                   initial={{ opacity: 0, x: -10 }}
@@ -269,7 +175,7 @@ export default function StatusRankFormModal({ open, onClose, onSuccess }: Status
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => deleteRank(rank.id)}
+                    onClick={() => handleDeleteRank(rank.id)}
                     className="text-destructive hover:text-destructive"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -280,21 +186,24 @@ export default function StatusRankFormModal({ open, onClose, onSuccess }: Status
           </TabsContent>
 
           <TabsContent value="qualifications" className="space-y-4">
-            <div className="flex gap-2">
-              <Input
-                placeholder="Enter new qualification"
-                value={newQualification}
-                onChange={(e) => setNewQualification(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && addQualification()}
-              />
-              <Button onClick={addQualification} disabled={loading || !newQualification.trim()}>
+            <form onSubmit={addQualification} className="flex gap-2">
+              <div className="flex-1 space-y-1">
+                <Input
+                  placeholder="Enter new qualification"
+                  {...qualificationForm.register("name")}
+                />
+                {qualificationForm.formState.errors.name && (
+                  <p className="text-sm text-destructive">{qualificationForm.formState.errors.name.message}</p>
+                )}
+              </div>
+              <Button type="submit" disabled={createQualification.isPending}>
                 <Plus className="w-4 h-4 mr-2" />
                 Add
               </Button>
-            </div>
+            </form>
 
             <div className="space-y-2 max-h-60 overflow-y-auto">
-              {qualifications.map((qual) => (
+              {qualifications.map((qual: any) => (
                 <motion.div
                   key={qual.id}
                   initial={{ opacity: 0, x: -10 }}
@@ -305,7 +214,7 @@ export default function StatusRankFormModal({ open, onClose, onSuccess }: Status
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => deleteQualification(qual.id)}
+                    onClick={() => handleDeleteQualification(qual.id)}
                     className="text-destructive hover:text-destructive"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -315,16 +224,6 @@ export default function StatusRankFormModal({ open, onClose, onSuccess }: Status
             </div>
           </TabsContent>
         </Tabs>
-
-        {error && (
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-sm text-destructive"
-          >
-            {error}
-          </motion.p>
-        )}
 
         <div className="flex justify-end pt-4">
           <Button variant="outline" onClick={onClose}>

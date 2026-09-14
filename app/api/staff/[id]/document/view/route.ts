@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { staff, documentHistory } from "@/lib/db/schema";
 import { getTokenFromRequest, verifyToken } from "@/lib/auth";
 import { getPresignedUrl, extractS3Key } from "@/lib/s3";
+import { logError } from "@/lib/error-logger";
 
 export async function GET(
   request: NextRequest,
@@ -73,6 +74,14 @@ export async function GET(
 
     return NextResponse.json({ url: presignedUrl });
   } catch (error) {
+    await logError({
+      source: "api/staff/[id]/document/view",
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      request,
+      userId: user?.id,
+      userRole: user?.role,
+    });
     return NextResponse.json(
       { error: "Couldn't load the document. Please try again." },
       { status: 500 }

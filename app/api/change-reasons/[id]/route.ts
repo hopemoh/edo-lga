@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { changeReasons } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { getTokenFromRequest, verifyToken } from "@/lib/auth";
+import { logError } from "@/lib/error-logger";
 
 export async function PATCH(
   request: NextRequest,
@@ -34,6 +35,14 @@ export async function PATCH(
 
     return NextResponse.json(updated);
   } catch (error) {
+    await logError({
+      source: "api/change-reasons/[id]",
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      request,
+      userId: user?.id,
+      userRole: user?.role,
+    });
     return NextResponse.json(
       { error: "Couldn't update the change reason. Please try again." },
       { status: 500 }

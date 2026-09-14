@@ -1,44 +1,16 @@
 "use client"
 
-import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { FileInput, MessageSquare, Clock, CheckCircle2 } from "lucide-react"
 import RichTextDisplay from "@/components/ui/rich-text-display"
-
-interface SectionContent {
-    title: string
-    subtitle: string
-    content: string
-}
+import { useContent } from "@/hooks/use-resources"
 
 export default function PetitionsSection() {
-    const [content, setContent] = useState<SectionContent>({
-        title: "Staff Petitions",
-        subtitle: "Grievance Resolution",
-        content: "The Commission provides a fair and transparent mechanism for staff to submit petitions and grievances. Every petition is carefully reviewed and addressed in accordance with established procedures."
-    })
-
-    useEffect(() => {
-        fetchContent()
-    }, [])
-
-    const fetchContent = async () => {
-        try {
-            const response = await fetch('/api/content')
-            if (response.ok) {
-                const data = await response.json()
-                const sectionData = data.find((item: SectionContent & { section: string }) => item.section === 'petitions')
-                if (sectionData) {
-                    setContent({
-                        title: sectionData.title,
-                        subtitle: sectionData.subtitle || "Grievance Resolution",
-                        content: sectionData.content
-                    })
-                }
-            }
-        } catch (error) {
-        }
-    }
+    const { data: contentData } = useContent()
+    const sectionData = contentData?.find((item: any) => item.section === 'petitions')
+    const content = sectionData
+        ? { title: sectionData.title, subtitle: sectionData.subtitle || "Grievance Resolution", content: sectionData.content }
+        : { title: "Staff Petitions", subtitle: "Grievance Resolution", content: "The Commission provides a fair and transparent mechanism for staff to submit petitions and grievances. Every petition is carefully reviewed and addressed in accordance with established procedures." }
 
     const process = [
         {

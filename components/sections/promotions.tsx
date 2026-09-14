@@ -1,68 +1,22 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { TrendingUp, Star, CheckCircle, Award, ArrowUpRight, ChevronDown } from "lucide-react"
 import RichTextDisplay from "@/components/ui/rich-text-display"
-
-interface SectionContent {
-    title: string
-    subtitle: string
-    content: string
-}
-
-interface Highlight {
-    id: string
-    title: string
-    subtitle: string
-    description: string
-}
+import { useContent, useHighlights } from "@/hooks/use-resources"
 
 export default function PromotionsSection() {
-    const [content, setContent] = useState<SectionContent>({
-        title: "Staff Promotions",
-        subtitle: "Career Advancement",
-        content: "The Commission ensures fair and transparent promotion processes for all eligible staff members. Promotions are based on merit, performance, years of service, and fulfillment of required qualifications."
-    })
-
-    const [highlights, setHighlights] = useState<Highlight[]>([])
+    const { data: contentData } = useContent()
+    const { data: highlights } = useHighlights("PROMOTION")
     const [showAll, setShowAll] = useState(false)
     const router = useRouter()
 
-    useEffect(() => {
-        fetchContent()
-        fetchHighlights()
-    }, [])
-
-    const fetchContent = async () => {
-        try {
-            const response = await fetch('/api/content')
-            if (response.ok) {
-                const data = await response.json()
-                const sectionData = data.find((item: SectionContent & { section: string }) => item.section === 'promotions')
-                if (sectionData) {
-                    setContent({
-                        title: sectionData.title,
-                        subtitle: sectionData.subtitle || "Career Advancement",
-                        content: sectionData.content
-                    })
-                }
-            }
-        } catch (error) {
-        }
-    }
-
-    const fetchHighlights = async () => {
-        try {
-            const response = await fetch('/api/highlights?type=PROMOTION')
-            if (response.ok) {
-                const data = await response.json()
-                setHighlights(data)
-            }
-        } catch (error) {
-        }
-    }
+    const sectionData = contentData?.find((item: any) => item.section === 'promotions')
+    const content = sectionData
+        ? { title: sectionData.title, subtitle: sectionData.subtitle || "Career Advancement", content: sectionData.content }
+        : { title: "Staff Promotions", subtitle: "Career Advancement", content: "The Commission ensures fair and transparent promotion processes for all eligible staff members. Promotions are based on merit, performance, years of service, and fulfillment of required qualifications." }
 
     return (
         <section id="promotions" className="py-20 px-4 md:px-8 lg:px-12 bg-muted/30">
@@ -106,7 +60,7 @@ export default function PromotionsSection() {
                         </div>
 
                         <AnimatePresence mode="wait">
-                            {highlights.slice(0, 4).map((staff, index) => (
+                            {(highlights || []).slice(0, 4).map((staff: any, index: number) => (
                                 <motion.div
                                     key={staff.id}
                                     initial={{ opacity: 0, y: 20 }}
@@ -138,7 +92,7 @@ export default function PromotionsSection() {
                             ))}
                         </AnimatePresence>
 
-                        {highlights.length > 4 && (
+                        {(highlights || []).length > 4 && (
                             <motion.button
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
@@ -153,7 +107,7 @@ export default function PromotionsSection() {
                             </motion.button>
                         )}
 
-                        {highlights.length === 0 && (
+                        {(highlights || []).length === 0 && (
                             <div className="text-center py-12 bg-card border border-border rounded-xl border-dashed">
                                 <p className="text-muted-foreground">No recent promotions to display.</p>
                             </div>

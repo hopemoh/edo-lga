@@ -1,19 +1,9 @@
 "use client"
 
-import { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { CheckCircle, XCircle, AlertCircle } from "lucide-react"
-
-interface ApprovalLog {
-    id: string
-    action: string
-    performedBy: string
-    performedByFullName: string
-    performedByRole: string
-    comments?: string
-    timestamp: Date | string
-}
+import { useChangeRequestAudit } from "@/hooks/use-change-requests"
 
 interface AuditLog {
     id: string
@@ -22,17 +12,13 @@ interface AuditLog {
     performedByRole: string
     timestamp: Date | string
     details: any
-    comments?: string
 }
 
 interface Event {
-    type: 'approval' | 'audit'
     id: string
     action: string
-    performedBy?: string
     performedByFullName: string
     performedByRole: string
-    comments?: string
     timestamp: Date
     details?: any
 }
@@ -41,38 +27,26 @@ interface AuditLogViewerProps {
     changeRequestId: string
 }
 
+const FIELD_LABELS: Record<string, string> = {
+    name: "Name",
+    phoneNumber: "Phone Number",
+    sex: "Sex",
+    dateOfBirth: "Date of Birth",
+    dateOfFirstAppt: "First Appointment",
+    dateOfConf: "Confirmation Date",
+    dateOfPresentAppt: "Present Appointment",
+    sgl: "SGL",
+    recommendedRetirementDate: "Retirement Date",
+    rank: "Rank",
+    status: "Status",
+    qualifications: "Qualifications",
+    remark: "Remark",
+    documentUrl: "Document",
+}
+
 export default function AuditLogViewer({ changeRequestId }: AuditLogViewerProps) {
-    const [auditData, setAuditData] = useState<{
-        approvalLogs: ApprovalLog[]
-        auditLogs: AuditLog[]
-    } | null>(null)
-    const [loading, setLoading] = useState(true)
-    const [error, setError] = useState<string | null>(null)
-
-    useEffect(() => {
-        fetchAuditLogs()
-    }, [changeRequestId])
-
-    const fetchAuditLogs = async () => {
-        try {
-            setLoading(true)
-            const token = localStorage.getItem('token')
-            const response = await fetch(`/api/change-requests/${changeRequestId}/audit`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            })
-
-            if (response.ok) {
-                const data = await response.json()
-                setAuditData(data)
-            } else {
-                setError("Couldn't load audit logs. Please try again.")
-            }
-        } catch (err) {
-            setError("Couldn't load audit logs. Please try again.")
-        } finally {
-            setLoading(false)
-        }
-    }
+    const { data: auditData, isLoading: loading, error: queryError } = useChangeRequestAudit(changeRequestId)
+    const error = queryError ? "Couldn't load audit logs. Please try again." : null
 
     const getActionIcon = (action: string) => {
         if (action.includes('APPROVE') || action.includes('CREATED')) {
@@ -94,6 +68,102 @@ export default function AuditLogViewer({ changeRequestId }: AuditLogViewerProps)
         if (action.includes('CORRECT')) return 'bg-amber-100 text-amber-800'
         if (action === 'COMPLETED') return 'bg-emerald-100 text-emerald-800'
         return 'bg-gray-100 text-gray-800'
+    }
+
+    const parseDetails = (details: any): Record<string, any> => {
+        if (!details) return {}
+        if (typeof details === 'string') {
+            try { return JSON.parse(details) } catch { return { raw: details } }
+        }
+        return details
+    }
+
+    const getFieldLabel = (key: string) => FIELD_LABELS[key] || key.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase())
+
+    const renderDetails = (details: any) => {
+        const parsed = parseDetails(details)
+        const selectedFields: string[] = parsed.selectedFields || []
+        const changes: Record<string, any> = parsed.changes || {}
+        const status = parsed.status
+        const comments = parsed.comments
+        const reason = parsed.reason
+        const correctedFields = parsed.correctedFields
+
+        const hasContent = selectedFields.length > 0 || Object.keys(changes).length > 0 || status || comments || reason || correctedFields
+        if (!hasContent) return null
+
+        return (
+            <div className="mt-2 space-y-2">
+                {status && (
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-500">Status:</span>
+                        <Badge className="bg-gray-100 text-gray-800 text-xs">{status.replace(/_/g, ' ')}</Badge>
+                    </div>
+                )}
+
+                {selectedFields.length > 0 && (
+                    <div>
+                        <p className="text-xs text-gray-500 mb-1">Fields being updated:</p>
+                        <div className="flex flex-wrap gap-1">
+                            {selectedFields.map((field: string) => (
+                                <Badge key={field} variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                                    {getFieldLabel(field)}
+                                </Badge>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {Object.keys(changes).length > 0 && (
+                    <div>
+                        <p className="text-xs text-gray-500 mb-1">Changes:</p>
+                        <div className="bg-gray-50 rounded p-2 space-y-1">
+                            {Object.entries(changes).map(([key, value]) => (
+                                <div key={key} className="flex items-start gap-2 text-xs">
+                                    <span className="font-medium text-gray-700 shrink-0">{getFieldLabel(key)}:</span>
+                                    <span className="text-gray-600">
+                                        {Array.isArray(value)
+                                            ? value.map((v: any) => typeof v === 'object' ? v.name || JSON.stringify(v) : v).join(', ')
+                                            : typeof value === 'object' && value !== null
+                                                ? value.name || JSON.stringify(value)
+                                                : String(value ?? '—')}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {correctedFields && correctedFields.length > 0 && (
+                    <div>
+                        <p className="text-xs text-gray-500 mb-1">Corrected fields:</p>
+                        <div className="flex flex-wrap gap-1">
+                            {correctedFields.map((field: string) => (
+                                <Badge key={field} variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">
+                                    {getFieldLabel(field)}
+                                </Badge>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {reason && (
+                    <div className="bg-gray-50 p-2 rounded border-l-2 border-amber-400">
+                        <p className="text-xs text-gray-700">
+                            <strong>Reason:</strong> {reason}
+                        </p>
+                    </div>
+                )}
+
+                {comments && (
+                    <div className="bg-gray-50 p-2 rounded border-l-2 border-blue-500">
+                        <p className="text-xs text-gray-700">
+                            <strong>Comments:</strong> {comments}
+                        </p>
+                    </div>
+                )}
+            </div>
+        )
     }
 
     if (loading) {
@@ -120,24 +190,10 @@ export default function AuditLogViewer({ changeRequestId }: AuditLogViewerProps)
         )
     }
 
-    const allEvents: Event[] = [
-        ...auditData.auditLogs.map(log => ({
-            ...log,
-            type: 'audit' as const,
-            performedBy: log.performedByFullName,
-            timestamp: new Date(log.timestamp),
-            action: log.action,
-            performedByFullName: log.performedByFullName,
-            performedByRole: log.performedByRole,
-        })),
-        ...auditData.approvalLogs.map(log => ({
-            ...log,
-            type: 'approval' as const,
-            timestamp: new Date(log.timestamp),
-            performedByFullName: log.performedByFullName,
-            performedByRole: log.performedByRole,
-        }))
-    ].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
+    const allEvents: Event[] = auditData.auditLogs.map(log => ({
+        ...log,
+        timestamp: new Date(log.timestamp),
+    })).sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
 
     return (
         <div className="bg-white border border-gray-200 rounded-lg p-4">
@@ -148,19 +204,15 @@ export default function AuditLogViewer({ changeRequestId }: AuditLogViewerProps)
                     <p className="text-sm text-gray-500">No events recorded yet</p>
                 ) : (
                     <div className="relative">
-                        {/* Timeline line */}
                         <div className="absolute left-3 top-0 bottom-0 w-0.5 bg-gray-200" />
 
-                        {/* Timeline items */}
                         <div className="space-y-4">
-                            {allEvents.map((event, index) => (
-                                <div key={`${event.type}-${event.id}`} className="relative pl-10">
-                                    {/* Timeline dot */}
+                            {allEvents.map((event) => (
+                                <div key={event.id} className="relative pl-10">
                                     <div className="absolute left-0 top-1.5 w-6 h-6 bg-white border-2 border-gray-200 rounded-full flex items-center justify-center">
                                         {getActionIcon(event.action)}
                                     </div>
 
-                                    {/* Event card */}
                                     <Card className="p-3 text-sm">
                                         <div className="flex items-start justify-between mb-2">
                                             <div className="flex items-center gap-2">
@@ -182,32 +234,7 @@ export default function AuditLogViewer({ changeRequestId }: AuditLogViewerProps)
                                             </p>
                                         </div>
 
-                                        {event.comments && typeof event.comments === 'string' && (
-                                            <div className="bg-gray-50 p-2 rounded mt-2 border-l-2 border-blue-500">
-                                                <p className="text-xs text-gray-700">
-                                                    <strong>Comments:</strong> {event.comments.trim()}
-                                                </p>
-                                            </div>
-                                        )}
-
-                                        {event.type === 'audit' && event.details && (
-                                            <details className="mt-2">
-                                                <summary className="text-xs font-semibold text-blue-600 cursor-pointer hover:text-blue-700">
-                                                    View Details
-                                                </summary>
-                                                <div className="bg-gray-50 p-2 rounded mt-2 text-xs">
-                                                    {typeof event.details === 'string' ? (
-                                                        <pre className="whitespace-pre-wrap wrap-break-words text-gray-700">
-                                                            {(event.details as string).trim()}
-                                                        </pre>
-                                                    ) : (
-                                                        <pre className="whitespace-pre-wrap wrap-break-words text-gray-700">
-                                                            {JSON.stringify(event.details, null, 2)}
-                                                        </pre>
-                                                    )}
-                                                </div>
-                                            </details>
-                                        )}
+                                        {renderDetails(event.details)}
                                     </Card>
                                 </div>
                             ))}

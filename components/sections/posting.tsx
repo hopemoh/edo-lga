@@ -1,68 +1,20 @@
 "use client"
 
-import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { ArrowRight, MapPin, FileText, RefreshCw, ChevronDown } from "lucide-react"
 import RichTextDisplay from "@/components/ui/rich-text-display"
-
-interface SectionContent {
-    title: string
-    subtitle: string
-    content: string
-}
-
-interface Highlight {
-    id: string
-    title: string
-    subtitle: string
-    description: string
-    image: string | null
-}
+import { useContent, useHighlights } from "@/hooks/use-resources"
 
 export default function PostingSection() {
-    const [content, setContent] = useState<SectionContent>({
-        title: "Posting",
-        subtitle: "Staff Movement & Posting",
-        content: "The Commission manages the posting and transfer of staff across all Local Government Areas. This ensures optimal distribution of human resources, skill matching, and balanced workforce deployment throughout Edo State Local Government Service."
-    })
-
-    const [highlights, setHighlights] = useState<Highlight[]>([])
+    const { data: contentData } = useContent()
+    const { data: highlights } = useHighlights("POSTING")
     const router = useRouter()
 
-    useEffect(() => {
-        fetchContent()
-        fetchHighlights()
-    }, [])
-
-    const fetchContent = async () => {
-        try {
-            const response = await fetch('/api/content')
-            if (response.ok) {
-                const data = await response.json()
-                const sectionData = data.find((item: SectionContent & { section: string }) => item.section === 'posting')
-                if (sectionData) {
-                    setContent({
-                        title: "Posting", // Force title to Posting as requested, or use sectionData.title if updated in DB
-                        subtitle: sectionData.subtitle || "Staff Movement & Posting",
-                        content: sectionData.content
-                    })
-                }
-            }
-        } catch (error) {
-        }
-    }
-
-    const fetchHighlights = async () => {
-        try {
-            const response = await fetch('/api/highlights?type=POSTING')
-            if (response.ok) {
-                const data = await response.json()
-                setHighlights(data)
-            }
-        } catch (error) {
-        }
-    }
+    const sectionData = contentData?.find((item: any) => item.section === 'posting')
+    const content = sectionData
+        ? { title: "Posting", subtitle: sectionData.subtitle || "Staff Movement & Posting", content: sectionData.content }
+        : { title: "Posting", subtitle: "Staff Movement & Posting", content: "The Commission manages the posting and transfer of staff across all Local Government Areas. This ensures optimal distribution of human resources, skill matching, and balanced workforce deployment throughout Edo State Local Government Service." }
 
     return (
         <section id="posting" className="py-20 px-4 md:px-8 lg:px-12 bg-linear-to-br from-background via-card to-background">
@@ -106,7 +58,7 @@ export default function PostingSection() {
                         </div>
 
                         <AnimatePresence mode="wait">
-                            {highlights.slice(0, 3).map((staff, index) => (
+                            {(highlights || []).slice(0, 3).map((staff: any, index: number) => (
                                 <motion.div
                                     key={staff.id}
                                     initial={{ opacity: 0, y: 20 }}
@@ -142,7 +94,7 @@ export default function PostingSection() {
                             ))}
                         </AnimatePresence>
 
-                        {highlights.length > 3 && (
+                        {(highlights || []).length > 3 && (
                             <motion.button
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
@@ -157,7 +109,7 @@ export default function PostingSection() {
                             </motion.button>
                         )}
 
-                        {highlights.length === 0 && (
+                        {(highlights || []).length === 0 && (
                             <div className="text-center py-12 bg-card border border-border rounded-xl border-dashed">
                                 <p className="text-muted-foreground">No recent postings to display.</p>
                             </div>

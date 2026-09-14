@@ -3,6 +3,7 @@ import { eq, desc } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { staff, documentHistory } from "@/lib/db/schema";
 import { getTokenFromRequest, verifyToken } from "@/lib/auth";
+import { logError } from "@/lib/error-logger";
 
 export async function GET(
   request: NextRequest,
@@ -35,6 +36,14 @@ export async function GET(
 
     return NextResponse.json(history);
   } catch (error) {
+    await logError({
+      source: "api/staff/[id]/document-history",
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      request,
+      userId: user?.id,
+      userRole: user?.role,
+    });
     return NextResponse.json(
       { error: "Couldn't load document history. Please try again." },
       { status: 500 }

@@ -69,7 +69,6 @@ export default function StatusFormModal({ open, onClose, onSuccess }: StatusForm
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g., HOD, OFFICER, EXECUTIVE"
-              required
             />
           </div>
 

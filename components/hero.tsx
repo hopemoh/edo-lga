@@ -1,48 +1,20 @@
 "use client"
 
-import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import RichTextDisplay from "@/components/ui/rich-text-display"
+import { useContent } from "@/hooks/use-resources"
 
 interface HeroProps {
   onDiscoverClick: () => void
 }
 
-interface HeroContent {
-  title: string
-  subtitle: string
-  content: string
-}
-
 export default function Hero({ onDiscoverClick }: HeroProps) {
-  const [content, setContent] = useState<HeroContent>({
-    title: "Explore Edo State",
-    subtitle: "The Heartbeat of Nigeria",
-    content: "Immerse yourself in the rich cultural heritage, vibrant communities, and economic vitality of Edo State's 18 Local Government Areas"
-  })
-
-  useEffect(() => {
-    fetchContent()
-  }, [])
-
-  const fetchContent = async () => {
-    try {
-      const response = await fetch('/api/content')
-      if (response.ok) {
-        const data = await response.json()
-        const heroData = data.find((item: any) => item.section === 'hero')
-        if (heroData) {
-          setContent({
-            title: heroData.title,
-            subtitle: heroData.subtitle || "The Heartbeat of Nigeria",
-            content: heroData.content
-          })
-        }
-      }
-    } catch (error) {
-    }
-  }
+  const { data: contentData } = useContent()
+  const heroData = contentData?.find((item: any) => item.section === 'hero')
+  const content = heroData
+    ? { title: heroData.title, subtitle: heroData.subtitle || "The Heartbeat of Nigeria", content: heroData.content }
+    : { title: "Explore Edo State", subtitle: "The Heartbeat of Nigeria", content: "Immerse yourself in the rich cultural heritage, vibrant communities, and economic vitality of Edo State's 18 Local Government Areas" }
 
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-background via-secondary/30 to-background pt-20">

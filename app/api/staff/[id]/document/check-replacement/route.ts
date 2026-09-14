@@ -3,6 +3,7 @@ import { eq, desc } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { staff, documentHistory } from "@/lib/db/schema";
 import { getTokenFromRequest, verifyToken } from "@/lib/auth";
+import { logError } from "@/lib/error-logger";
 
 export async function GET(
   request: NextRequest,
@@ -68,6 +69,14 @@ export async function GET(
       message: "Document can be replaced",
     });
   } catch (error) {
+    await logError({
+      source: "api/staff/[id]/document/check-replacement",
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      request,
+      userId: user?.id,
+      userRole: user?.role,
+    });
     return NextResponse.json(
       { error: "Couldn't check document status. Please try again." },
       { status: 500 }

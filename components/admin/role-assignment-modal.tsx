@@ -1,12 +1,18 @@
 "use client"
 
-import { useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ShieldCheck, Loader2 } from "lucide-react"
 import type { Staff } from "@/lib/types"
+import { useUpdateStaff } from "@/hooks/use-staff"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { roleAssignmentSchema } from "@/lib/validations"
+import type { z } from "zod"
+
+type RoleAssignmentFormValues = z.infer<typeof roleAssignmentSchema>
 
 interface RoleAssignmentModalProps {
     open: boolean
@@ -20,38 +26,27 @@ type Role = "STAFF" | "ADMIN" | "SECRETARY" | "CHAIRMAN"
 const ROLES: Role[] = ["STAFF", "ADMIN", "SECRETARY", "CHAIRMAN"]
 
 export default function RoleAssignmentModal({ open, onClose, onSuccess, staff }: RoleAssignmentModalProps) {
-    const [role, setRole] = useState<Role>((staff.role as Role) || "STAFF")
-    const [loading, setLoading] = useState(false)
-    const [error, setError] = useState("")
+    const updateMutation = useUpdateStaff()
 
-    const handleSubmit = async () => {
-        setLoading(true)
-        setError("")
+    const { handleSubmit, formState: { errors }, setValue, watch } = useForm<RoleAssignmentFormValues>({
+        resolver: zodResolver(roleAssignmentSchema),
+        defaultValues: {
+            role: (staff.role as Role) || "STAFF",
+        },
+    })
 
-        try {
-            const token = localStorage.getItem('token')
-            const response = await fetch(`/api/staff/${staff.id}`, {
-                method: 'PUT',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
+    const currentRole = watch("role")
+
+    const onSubmit = (data: RoleAssignmentFormValues) => {
+        updateMutation.mutate(
+            { id: staff.id, data: { role: data.role } },
+            {
+                onSuccess: (updatedStaff: any) => {
+                    onSuccess(updatedStaff)
+                    onClose()
                 },
-                body: JSON.stringify({ role })
-            })
-
-            if (response.ok) {
-                const updatedStaff = await response.json()
-                onSuccess(updatedStaff)
-                onClose()
-            } else {
-                const data = await response.json()
-                setError(data.error || "Couldn't save your changes. Please try again.")
             }
-        } catch (err) {
-            setError("You appear to be offline. Please check your connection.")
-        } finally {
-            setLoading(false)
-        }
+        )
     }
 
     return (
@@ -64,7 +59,7 @@ export default function RoleAssignmentModal({ open, onClose, onSuccess, staff }:
                     </DialogTitle>
                 </DialogHeader>
 
-                <div className="space-y-6 py-4">
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 py-4">
                     <div className="bg-primary/5 border border-primary/10 rounded-lg p-4">
                         <p className="text-sm text-muted-foreground mb-1">Assigning role for:</p>
                         <p className="font-bold text-lg">{staff.name}</p>
@@ -74,7 +69,7 @@ export default function RoleAssignmentModal({ open, onClose, onSuccess, staff }:
                     <div className="space-y-4">
                         <div className="space-y-2">
                             <Label htmlFor="role">Select System Role</Label>
-                            <Select value={role} onValueChange={(value: Role) => setRole(value)}>
+                            <Select value={currentRole} onValueChange={(value: Role) => setValue("role", value)}>
                                 <SelectTrigger id="role" className="w-full">
                                     <SelectValue placeholder="Select role" />
                                 </SelectTrigger>
@@ -86,6 +81,9 @@ export default function RoleAssignmentModal({ open, onClose, onSuccess, staff }:
                                     ))}
                                 </SelectContent>
                             </Select>
+                            {errors.role && (
+                                <p className="text-sm text-destructive">{errors.role.message}</p>
+                            )}
                         </div>
 
                         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm flex gap-2">
@@ -97,22 +95,18 @@ export default function RoleAssignmentModal({ open, onClose, onSuccess, staff }:
                                 </p>
                             </div>
                         </div>
-
-                        {error && (
-                            <p className="text-sm text-destructive bg-destructive/10 p-2 rounded">{error}</p>
-                        )}
                     </div>
 
                     <div className="flex gap-2">
-                        <Button variant="outline" onClick={onClose} className="flex-1" disabled={loading}>
+                        <Button type="button" variant="outline" onClick={onClose} className="flex-1" disabled={updateMutation.isPending}>
                             Cancel
                         </Button>
-                        <Button onClick={handleSubmit} className="flex-1" disabled={loading}>
-                            {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                            {loading ? "Updating..." : "Update Role"}
+                        <Button type="submit" className="flex-1" disabled={updateMutation.isPending}>
+                            {updateMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                            {updateMutation.isPending ? "Updating..." : "Update Role"}
                         </Button>
                     </div>
-                </div>
+                </form>
             </DialogContent>
         </Dialog>
     )
