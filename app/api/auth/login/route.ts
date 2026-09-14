@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { staff, lgas } from "@/lib/db/schema";
-import { generateToken } from "@/lib/auth";
+import { generateToken, generateRefreshToken } from "@/lib/auth";
 import { loginSchema } from "@/lib/validations";
 import { logError } from "@/lib/error-logger";
 import { rateLimit } from "@/lib/rate-limit";
@@ -62,7 +62,14 @@ export async function POST(request: NextRequest) {
       name: staffRecord.name,
     });
 
-    return NextResponse.json({
+    const refreshToken = generateRefreshToken({
+      id: staffRecord.id,
+      role: staffRecord.role,
+      lgaId: staffRecord.lgaId,
+      name: staffRecord.name,
+    });
+
+    const response = NextResponse.json({
       token,
       user: {
         id: staffRecord.id,
@@ -74,6 +81,16 @@ export async function POST(request: NextRequest) {
         statusId: staffRecord.statusId,
       },
     });
+
+    response.cookies.set("refresh_token", refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 30 * 24 * 60 * 60, // 30 days
+    });
+
+    return response;
   } catch (error) {
     await logError({
       source: "api/auth/login",

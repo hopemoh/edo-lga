@@ -29,6 +29,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   logout: () => {
     localStorage.removeItem("token")
     localStorage.removeItem("currentUser")
+    document.cookie = "refresh_token=; path=/; max-age=0"
     set({ user: null, token: null })
   },
   isAdmin: () => {
