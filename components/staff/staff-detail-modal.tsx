@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { motion } from "framer-motion"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { X, Mail, Briefcase, Award, Upload, FileEdit, FileText, ShieldCheck, Calendar, MapPin, Hash, User } from "lucide-react"
+import { X, Mail, Briefcase, Award, Upload, FileEdit, FileText, ShieldCheck, Calendar, MapPin, Hash, User, KeyRound } from "lucide-react"
 import type { Staff } from "@/lib/types"
 import ChangeRequestModal from "../admin/change-request-modal"
 import DocumentHistoryModal from "./document-history-modal"
@@ -117,7 +117,7 @@ export default function StaffDetailModal({ staff, onClose, onUpdate, onEdit }: S
 
     try {
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('document', file);
 
       const response = await fetch(`/api/staff/${staff.id}/document`, {
         method: 'POST',
@@ -159,7 +159,7 @@ export default function StaffDetailModal({ staff, onClose, onUpdate, onEdit }: S
 
       {/* Modal */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <Card className="relative w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden border-primary/20 bg-card">
+        <Card className="relative w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden border-primary/20 bg-card">
           {/* Fixed X button */}
           <Button
             variant="ghost"
@@ -383,30 +383,33 @@ export default function StaffDetailModal({ staff, onClose, onUpdate, onEdit }: S
           </div>
 
           {/* Fixed footer */}
-          <div className="px-6 py-4 border-t border-border/50 bg-muted/5 flex justify-between gap-2 shrink-0">
+          <div className="px-6 py-4 border-t border-border/50 bg-muted/5 flex flex-wrap justify-end gap-1.5 shrink-0">
             <Button
               variant="outline"
+              size="sm"
               onClick={() => setShowDocumentHistory(true)}
-              className="bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200"
+              className="bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200 text-xs"
             >
-              <FileText className="w-4 h-4 mr-2" />
+              <FileText className="w-3 h-3 mr-1" />
               Document History
             </Button>
             <Button
               variant="outline"
+              size="sm"
               onClick={() => setShowDataHistory(true)}
-              className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200"
+              className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200 text-xs"
             >
-              <FileText className="w-4 h-4 mr-2" />
+              <FileText className="w-3 h-3 mr-1" />
               Data History
             </Button>
             {currentUser?.role === 'CHAIRMAN' && (
               <Button
                 variant="outline"
+                size="sm"
                 onClick={() => setShowRoleAssignment(true)}
-                className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200"
+                className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200 text-xs"
               >
-                <ShieldCheck className="w-4 h-4 mr-2" />
+                <ShieldCheck className="w-3 h-3 mr-1" />
                 Assign Role
               </Button>
             )}
@@ -414,6 +417,7 @@ export default function StaffDetailModal({ staff, onClose, onUpdate, onEdit }: S
               <>
                 <Button
                   variant="outline"
+                  size="sm"
                   onClick={() => {
                     if (!isAdmin) {
                       toast.error("Only employees with ADMIN user role can create change requests.")
@@ -422,28 +426,58 @@ export default function StaffDetailModal({ staff, onClose, onUpdate, onEdit }: S
                     setInitialSelectedFields([])
                     setShowChangeRequest(true)
                   }}
-                  className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
+                  className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 text-xs"
                   disabled={!!pendingDataRequest || isLoading}
                 >
-                  <FileEdit className="w-4 h-4 mr-2" />
+                  <FileEdit className="w-3 h-3 mr-1" />
                   {pendingDataRequest ? 'Data Change Pending' : 'Process Change Request'}
                 </Button>
                 {onEdit && (
                   <Button
                     variant="default"
+                    size="sm"
                     onClick={() => {
                       onEdit(staff)
                       onClose()
                     }}
-                    className="bg-primary hover:bg-primary/90 text-white"
+                    className="bg-primary hover:bg-primary/90 text-white text-xs"
                   >
-                    <FileEdit className="w-4 h-4 mr-2" />
+                    <FileEdit className="w-3 h-3 mr-1" />
                     Edit Staff
                   </Button>
                 )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    if (!confirm(`Reset password for ${staff.name}? They will use phone + DOB to login and must set a new password.`)) return
+                    try {
+                      const token = localStorage.getItem("token")
+                      const res = await fetch(`/api/staff/${staff.id}/reset-password`, {
+                        method: "POST",
+                        headers: { Authorization: `Bearer ${token}` },
+                      })
+                      const data = await res.json()
+                      if (res.ok) {
+                        const { toast } = await import("sonner")
+                        toast.success(data.message || "Password reset successfully")
+                      } else {
+                        const { toast } = await import("sonner")
+                        toast.error(data.error || "Couldn't reset password. Please try again.")
+                      }
+                    } catch {
+                      const { toast } = await import("sonner")
+                      toast.error("Couldn't reset password. Please try again.")
+                    }
+                  }}
+                  className="bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200 text-xs"
+                >
+                  <KeyRound className="w-3 h-3 mr-1" />
+                  Reset Password
+                </Button>
               </>
             )}
-            <Button variant="outline" onClick={onClose}>
+            <Button variant="outline" size="sm" onClick={onClose} className="text-xs">
               Close
             </Button>
           </div>

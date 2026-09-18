@@ -23,11 +23,13 @@ export function useStaffMember(id: string) {
 export function useCreateStaff() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: any) =>
-      apiFetch("/api/staff", {
+    mutationFn: (data: any) => {
+      const isFormData = data instanceof FormData
+      return apiFetch("/api/staff", {
         method: "POST",
-        body: JSON.stringify(data),
-      }),
+        body: isFormData ? data : JSON.stringify(data),
+      })
+    },
     onSuccess: () => {
       toast.success("Staff record created")
       qc.invalidateQueries({ queryKey: ["staff"] })
@@ -105,6 +107,23 @@ export function useBulkUpdate() {
     },
     onError: () => {
       toast.error("Update failed. Please try again.")
+    },
+  })
+}
+
+export function useResetPassword() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (staffId: string) =>
+      apiFetch(`/api/staff/${staffId}/reset-password`, {
+        method: "POST",
+      }),
+    onSuccess: (data: any) => {
+      qc.invalidateQueries({ queryKey: ["staff"] })
+      toast.success(data?.message || "Password reset successfully")
+    },
+    onError: () => {
+      toast.error("Couldn't reset password. Please try again.")
     },
   })
 }

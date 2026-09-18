@@ -282,13 +282,15 @@ export default function StaffDashboard() {
                 >
                   Staff Management
                 </Button>
-                <Button
-                  variant={view === "logs" ? "default" : "outline"}
-                  onClick={() => setView("logs")}
-                  className={view === "logs" ? "bg-linear-to-r from-primary to-accent" : ""}
-                >
-                  Activity Logs
-                </Button>
+                {isAdmin() && (
+                  <Button
+                    variant={view === "logs" ? "default" : "outline"}
+                    onClick={() => setView("logs")}
+                    className={view === "logs" ? "bg-linear-to-r from-primary to-accent" : ""}
+                  >
+                    Activity Logs
+                  </Button>
+                )}
                 {isAdmin() && (
                   <Button
                     variant={view === "requests" ? "default" : "outline"}

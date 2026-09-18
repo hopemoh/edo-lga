@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Card } from "@/components/ui/card"
 import { Eye, EyeOff } from "lucide-react"
 import { useLogin } from "@/hooks/use-auth"
+import { useAuthStore } from "@/lib/store"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { loginSchema } from "@/lib/validations"
@@ -30,8 +31,12 @@ export default function LoginPage() {
 
   const onSubmit = (data: LoginFormValues) => {
     loginMutation.mutate(data, {
-      onSuccess: () => {
-        router.push("/dashboard")
+      onSuccess: (response) => {
+        if (response.mustChangePassword) {
+          router.push("/change-password")
+        } else {
+          router.push("/dashboard")
+        }
       },
     })
   }

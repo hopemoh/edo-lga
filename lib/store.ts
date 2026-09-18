@@ -13,7 +13,9 @@ interface User {
 interface AuthState {
   user: User | null
   token: string | null
-  setAuth: (user: User, token: string) => void
+  mustChangePassword: boolean
+  setAuth: (user: User, token: string, mustChangePassword?: boolean) => void
+  setMustChangePassword: (value: boolean) => void
   logout: () => void
   isAdmin: () => boolean
 }
@@ -21,16 +23,23 @@ interface AuthState {
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   token: null,
-  setAuth: (user, token) => {
+  mustChangePassword: false,
+  setAuth: (user, token, mustChangePassword = false) => {
     localStorage.setItem("token", token)
     localStorage.setItem("currentUser", JSON.stringify(user))
-    set({ user, token })
+    localStorage.setItem("mustChangePassword", JSON.stringify(mustChangePassword))
+    set({ user, token, mustChangePassword })
+  },
+  setMustChangePassword: (value) => {
+    localStorage.setItem("mustChangePassword", JSON.stringify(value))
+    set({ mustChangePassword: value })
   },
   logout: () => {
     localStorage.removeItem("token")
     localStorage.removeItem("currentUser")
+    localStorage.removeItem("mustChangePassword")
     document.cookie = "refresh_token=; path=/; max-age=0"
-    set({ user: null, token: null })
+    set({ user: null, token: null, mustChangePassword: false })
   },
   isAdmin: () => {
     const { user } = get()
@@ -42,10 +51,12 @@ export function initAuthFromStorage() {
   if (typeof window === "undefined") return
   const token = localStorage.getItem("token")
   const userStr = localStorage.getItem("currentUser")
+  const mustChangePasswordStr = localStorage.getItem("mustChangePassword")
   if (token && userStr) {
     try {
       const user = JSON.parse(userStr)
-      useAuthStore.getState().setAuth(user, token)
+      const mustChangePassword = mustChangePasswordStr === "true"
+      useAuthStore.getState().setAuth(user, token, mustChangePassword)
     } catch {}
   }
 }

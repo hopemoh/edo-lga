@@ -80,6 +80,7 @@ export async function POST(request: NextRequest) {
         phoneNumber: staffRecord.phoneNumber,
         statusId: staffRecord.statusId,
       },
+      mustChangePassword: !staffRecord.hasChangedPassword,
     });
 
     response.cookies.set("refresh_token", refreshToken, {

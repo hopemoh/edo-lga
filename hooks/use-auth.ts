@@ -13,6 +13,7 @@ interface LoginResponse {
     phoneNumber?: string
     statusId?: string
   }
+  mustChangePassword: boolean
 }
 
 export function useLogin() {
@@ -27,7 +28,7 @@ export function useLogin() {
       return res
     },
     onSuccess: (data) => {
-      setAuth(data.user, data.token)
+      setAuth(data.user, data.token, data.mustChangePassword)
     },
   })
 }

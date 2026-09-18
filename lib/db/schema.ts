@@ -137,6 +137,8 @@ export const staff = pgTable(
     canUpdateDocument: boolean("canUpdateDocument").notNull().default(false),
     remark: text("remark"),
     yearsExperience: integer("yearsExperience"),
+    passwordHash: text("passwordHash"),
+    hasChangedPassword: boolean("hasChangedPassword").notNull().default(false),
     createdAt: timestamp("createdAt").notNull().defaultNow(),
     updatedAt: timestamp("updatedAt").notNull().defaultNow(),
   },

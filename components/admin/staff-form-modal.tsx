@@ -200,15 +200,11 @@ export default function StaffFormModal({ open, onClose, onSuccess, lgaId: initia
           }
         )
       } else {
+        const staffData = { ...data, qualificationIds: selectedQualifications }
         const formDataWithFile = new FormData()
-        for (const key in data) {
-          formDataWithFile.append(key, (data as any)[key])
-        }
-        selectedQualifications.forEach(qId => {
-          formDataWithFile.append('qualificationIds[]', qId)
-        })
+        formDataWithFile.append('data', JSON.stringify(staffData))
         if (file) {
-          formDataWithFile.append('file', file)
+          formDataWithFile.append('document', file)
         }
 
         createMutation.mutate(formDataWithFile as any, {

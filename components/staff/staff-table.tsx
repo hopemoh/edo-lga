@@ -35,7 +35,6 @@ export default function StaffTable({ staff, onUpdate, onEdit, isAdmin = false, c
           <table className="w-full text-sm">
             <thead className="bg-muted/50 border-b border-border/50">
               <tr>
-                <th className="px-4 py-3 text-left font-medium">S/N</th>
                 <th className="px-4 py-3 text-left font-medium">Name</th>
                 <th className="px-4 py-3 text-left font-medium">Sex</th>
                 <th className="px-4 py-3 text-left font-medium">Status</th>
@@ -48,7 +47,6 @@ export default function StaffTable({ staff, onUpdate, onEdit, isAdmin = false, c
             <tbody>
               {staff.map((s, index) => (
                 <tr key={s.id} className="border-b border-border/30 hover:bg-secondary/5 transition-colors">
-                    <td className="px-4 py-3 text-center font-medium text-muted-foreground">{s.serialNumber}</td>
                     <td className="px-4 py-3 font-medium whitespace-nowrap">{s.name}</td>
                     <td className="px-4 py-3">{s.sex}</td>
                     <td className="px-4 py-3">{(s.status as any)?.name || s.status}</td>

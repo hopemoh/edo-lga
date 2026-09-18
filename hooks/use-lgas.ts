@@ -19,10 +19,10 @@ export function useLGA(id: string) {
 export function useUpdateLGA() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) =>
+    mutationFn: ({ id, data }: { id: string; data: FormData }) =>
       apiFetch(`/api/lgas/${id}`, {
         method: "PUT",
-        body: JSON.stringify(data),
+        body: data,
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["lgas"] })
