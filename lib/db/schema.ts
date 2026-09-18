@@ -16,7 +16,7 @@ import { relations } from "drizzle-orm";
 
 export const roleEnum = pgEnum("Role", ["STAFF", "ADMIN", "SECRETARY", "CHAIRMAN"]);
 
-export const logActionEnum = pgEnum("LogAction", ["CREATE", "UPDATE", "DELETE"]);
+export const logActionEnum = pgEnum("LogAction", ["CREATE", "UPDATE", "DELETE", "DELEGATION_CREATED", "DELEGATION_REVOKED"]);
 
 export const changeRequestStatusEnum = pgEnum("ChangeRequestStatus", [
   "PENDING",
@@ -137,6 +137,8 @@ export const staff = pgTable(
     canUpdateDocument: boolean("canUpdateDocument").notNull().default(false),
     remark: text("remark"),
     yearsExperience: integer("yearsExperience"),
+    passwordHash: text("passwordHash"),
+    hasChangedPassword: boolean("hasChangedPassword").notNull().default(false),
     createdAt: timestamp("createdAt").notNull().defaultNow(),
     updatedAt: timestamp("updatedAt").notNull().defaultNow(),
   },
@@ -222,6 +224,7 @@ export const contentSections = pgTable(
     title: text("title").notNull(),
     subtitle: text("subtitle"),
     content: text("content").notNull(),
+    metadata: json("metadata"),
     updatedAt: timestamp("updatedAt").notNull().defaultNow(),
   }
 );
@@ -363,6 +366,18 @@ export const errorLogs = pgTable(
     index("error_logs_level_idx").on(table.level),
     index("error_logs_resolved_idx").on(table.resolved),
   ]
+);
+
+export const delegations = pgTable(
+  "delegations",
+  {
+    id: text("id").primaryKey(),
+    delegatorId: text("delegatorId").notNull().references(() => staff.id),
+    delegateId: text("delegateId").notNull().references(() => staff.id),
+    isActive: boolean("isActive").notNull().default(true),
+    createdAt: timestamp("createdAt").notNull().defaultNow(),
+    revokedAt: timestamp("revokedAt"),
+  }
 );
 
 export const executives = pgTable(

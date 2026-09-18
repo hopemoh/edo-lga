@@ -38,7 +38,9 @@ export async function GET(request: NextRequest) {
     const lgaIdParam = searchParams.get("lgaId");
 
     let whereCondition;
-    if (user.role === "STAFF" && user.lgaId) {
+    if (user.role === "STAFF") {
+      whereCondition = eq(staff.id, user.id);
+    } else if (user.lgaId && !lgaIdParam) {
       whereCondition = eq(staff.lgaId, user.lgaId);
     } else if (lgaIdParam) {
       whereCondition = eq(staff.lgaId, lgaIdParam);

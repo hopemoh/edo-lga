@@ -48,7 +48,7 @@ const sections: Section[] = [
           <h3 className="text-xl font-bold mb-3">How to Access</h3>
           <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
             <li>Open your web browser and navigate to the application URL</li>
-            <li>Click <strong>&quot;Staff Dashboard&quot;</strong> in the top navigation bar</li>
+            <li>Click <strong>&quot;Login&quot;</strong> in the top navigation bar</li>
             <li>Enter your <strong>phone number</strong> (this is your username)</li>
             <li>Enter your <strong>date of birth</strong> in YYYY-MM-DD format (this is your password)</li>
             <li>Click <strong>Login</strong></li>
@@ -57,7 +57,7 @@ const sections: Section[] = [
 
         <div className="bg-muted/50 border border-border rounded-xl p-4">
           <p className="text-sm font-medium mb-1">Login Format</p>
-          <p className="text-sm text-muted-foreground">Phone: <code className="bg-muted px-1.5 py-0.5 rounded">8123456789</code> (without leading 0)</p>
+          <p className="text-sm text-muted-foreground">Phone: <code className="bg-muted px-1.5 py-0.5 rounded">08123456789</code> (leading 0 is optional — it gets stripped automatically)</p>
           <p className="text-sm text-muted-foreground">DOB: <code className="bg-muted px-1.5 py-0.5 rounded">1980-03-03</code></p>
         </div>
 
@@ -98,17 +98,20 @@ const sections: Section[] = [
             <tbody className="divide-y divide-border">
               {[
                 ["View own profile", true, true, true, true],
-                ["Submit change requests", true, true, true, true],
+                ["Submit change requests", false, true, true, true],
                 ["View all staff records", false, true, true, true],
                 ["Add/Edit staff members", false, true, true, true],
                 ["Bulk import staff (Excel/PDF)", false, true, true, true],
                 ["Upload staff documents", false, true, true, true],
+                ["View Activity Logs", false, true, true, true],
                 ["Manage LGA details", false, true, true, true],
                 ["Manage landing page content", false, true, true, true],
                 ["Manage executives & highlights", false, true, true, true],
+                ["Reset staff passwords", false, true, false, false],
                 ["1st-level approval of requests", false, true, true, true],
                 ["2nd-level approval of requests", false, false, true, true],
                 ["Final approval of requests", false, false, false, true],
+                ["Delegate approval authority", false, false, false, true],
                 ["System settings", false, false, false, true],
               ].map(([label, staff, admin, sec, chair], i) => (
                 <tr key={i} className="hover:bg-muted/50">
@@ -147,8 +150,9 @@ const sections: Section[] = [
         <div>
           <h3 className="text-xl font-bold mb-3">Viewing Staff Records</h3>
           <p className="text-muted-foreground mb-4">
-            The staff table displays all records with columns for Serial Number, Name, Sex, Status, Rank,
-            Qualifications, SGL, Appointment Dates, LGA, and more. Use the search bar to filter by name.
+            The staff table displays records with columns for Name, Sex, Status, Rank,
+            Qualifications, SGL, and Actions. Use the search bar to filter by name.
+            Staff members can only see their own profile.
           </p>
         </div>
 
@@ -289,7 +293,7 @@ const sections: Section[] = [
           <div className="bg-muted/50 border border-border rounded-xl p-6 space-y-3">
             <div className="flex items-center gap-3">
               <span className="w-8 h-8 rounded-full bg-yellow-100 text-yellow-700 flex items-center justify-center text-sm font-bold">1</span>
-              <span className="text-sm"><strong>Staff</strong> submits a change request → Status: <code>PENDING</code></span>
+              <span className="text-sm"><strong>Admin</strong> creates a change request → Status: <code>PENDING</code></span>
             </div>
             <div className="flex items-center gap-3">
               <span className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-bold">2</span>
@@ -308,9 +312,13 @@ const sections: Section[] = [
 
         <div>
           <h3 className="text-xl font-bold mb-3">Submitting a Change Request</h3>
+          <p className="text-muted-foreground mb-4">
+            Only ADMIN, SECRETARY, and CHAIRMAN roles can create change requests. Open a staff member&apos;s
+            profile and click <strong>&quot;Process Change Request&quot;</strong> to begin.
+          </p>
           <ol className="list-decimal list-inside space-y-2 text-muted-foreground mb-4">
             <li>Open the staff member&apos;s profile</li>
-            <li>Click <strong>&quot;Request Change&quot;</strong></li>
+            <li>Click <strong>&quot;Process Change Request&quot;</strong></li>
             <li>Select the fields to change (name, DOB, phone, rank, status, etc.)</li>
             <li>Choose a reason from the dropdown (some reasons require a supporting document)</li>
             <li>Enter the corrected values</li>
@@ -365,8 +373,9 @@ const sections: Section[] = [
         <div>
           <h3 className="text-xl font-bold mb-3">Overview</h3>
           <p className="text-muted-foreground">
-            The public landing page is fully content-manageable. All text sections, executive photos, and
-            highlight items can be edited from the dashboard without code changes.
+            The public landing page is fully content-manageable. All text sections, executive photos,
+            highlight items, footer content, and annual report downloads can be edited from the dashboard
+            without code changes.
           </p>
         </div>
 
@@ -422,6 +431,32 @@ const sections: Section[] = [
             className="w-full rounded-xl border border-border"
           />
         </div>
+
+        <div>
+          <h3 className="text-xl font-bold mb-3">Uploading Annual Reports</h3>
+          <p className="text-muted-foreground mb-4">
+            Admins can upload a PDF annual report that visitors can download from the landing page.
+          </p>
+          <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
+            <li>Click <strong>&quot;Manage Content&quot;</strong> in the dashboard</li>
+            <li>Select the <strong>Annual Report</strong> tab under Reports</li>
+            <li>Upload a PDF file (max 10MB)</li>
+            <li>The &quot;Download Annual Reports&quot; section will appear on the landing page</li>
+          </ol>
+        </div>
+
+        <div>
+          <h3 className="text-xl font-bold mb-3">Customizing the Footer</h3>
+          <p className="text-muted-foreground mb-4">
+            The footer description, copyright text, and navigation links can be managed from the dashboard.
+          </p>
+          <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
+            <li>Click <strong>&quot;Manage Content&quot;</strong> in the dashboard</li>
+            <li>Select the <strong>Footer</strong> tab under Reports</li>
+            <li>Edit the description, copyright text, and add/remove navigation links</li>
+            <li>Click <strong>Save</strong></li>
+          </ol>
+        </div>
       </div>
     ),
   },
@@ -463,6 +498,47 @@ const sections: Section[] = [
         </div>
 
         <div>
+          <h3 className="text-xl font-bold mb-3">Resetting Staff Passwords</h3>
+          <p className="text-muted-foreground mb-4">
+            If a staff member forgets their password, admins can reset it. This clears their password
+            and forces them to set a new one on their next login (using phone + DOB).
+          </p>
+          <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
+            <li>Open the staff member&apos;s profile</li>
+            <li>Click <strong>&quot;Reset Password&quot;</strong></li>
+            <li>Confirm the reset in the dialog</li>
+            <li>The staff member will use phone + DOB to login and must set a new password</li>
+          </ol>
+        </div>
+
+        <div>
+          <h3 className="text-xl font-bold mb-3">Delegating Approval Authority</h3>
+          <p className="text-muted-foreground mb-4">
+            The Chairman can delegate a staff member to approve change requests on their behalf.
+            The delegate inherits CHAIRMAN-level approval permissions while the delegation is active.
+            Both the delegate and the Chairman are logged in the audit trail for every action.
+          </p>
+          <ol className="list-decimal list-inside space-y-2 text-muted-foreground mb-4">
+            <li>Open the profile of the staff member you want to delegate</li>
+            <li>Click <strong>&quot;Delegate&quot;</strong> (purple button)</li>
+            <li>Review the confirmation dialog and click <strong>&quot;Confirm Delegate&quot;</strong></li>
+            <li>The delegate can now approve requests at the Chairman level</li>
+          </ol>
+          <div className="bg-muted/50 border border-border rounded-xl p-4 space-y-2">
+            <p className="text-sm font-medium">Switching Delegates</p>
+            <p className="text-sm text-muted-foreground">
+              If a delegate is already active, clicking &quot;Delegate&quot; on a different staff member
+              will show a switch dialog. The previous delegation is revoked automatically.
+            </p>
+            <p className="text-sm font-medium mt-3">Revoking Delegation</p>
+            <p className="text-sm text-muted-foreground">
+              Open the current delegate&apos;s profile and click <strong>&quot;Delegate&quot;</strong> to see
+              the revoke option. Revoking restores full control to the Chairman only.
+            </p>
+          </div>
+        </div>
+
+        <div>
           <h3 className="text-xl font-bold mb-3">System Settings (Chairman Only)</h3>
           <p className="text-muted-foreground mb-4">
             The Chairman can configure system-wide settings such as the document replacement time window.
@@ -477,10 +553,10 @@ const sections: Section[] = [
         <div>
           <h3 className="text-xl font-bold mb-3">Activity Logs &amp; Audit Trail</h3>
           <p className="text-muted-foreground mb-4">
-            All actions in the system are logged for accountability. You can view:
+            All actions in the system are logged for accountability. ADMIN, SECRETARY, and CHAIRMAN can view:
           </p>
           <ul className="list-disc list-inside space-y-2 text-muted-foreground mb-4">
-            <li><strong>Activity Logs</strong> — All system actions with timestamps</li>
+            <li><strong>Activity Logs</strong> — All system actions with timestamps (not visible to STAFF)</li>
             <li><strong>Approval Logs</strong> — Detailed approval/rejection history</li>
             <li><strong>Audit Trail</strong> — Complete change history for each staff record</li>
           </ul>
@@ -497,7 +573,7 @@ const sections: Section[] = [
         {[
           {
             q: "I can't log in — it says 'Invalid credentials'",
-            a: "Your phone number is your username and your date of birth (YYYY-MM-DD format) is your password. Contact your admin if you need your credentials reset.",
+            a: "Enter your full phone number (with leading 0, e.g. 08123456789) and your date of birth (YYYY-MM-DD format). Contact your admin if you need your credentials reset.",
           },
           {
             q: "My document won't upload",
@@ -525,7 +601,7 @@ const sections: Section[] = [
           },
           {
             q: "How do I change my password?",
-            a: "Your password is your date of birth. To change it, contact your admin to update your date of birth in the system, or submit a change request for 'Change of date of birth'.",
+            a: "When you first log in (or after an admin resets your password), you'll be prompted to set a new password. Your initial password is your date of birth. Only admins can reset passwords — contact your admin if you need a reset.",
           },
         ].map((item, i) => (
           <details key={i} className="group border border-border rounded-xl overflow-hidden">
@@ -538,129 +614,6 @@ const sections: Section[] = [
             </div>
           </details>
         ))}
-      </div>
-    ),
-  },
-  {
-    id: "technical",
-    title: "Technical Details",
-    icon: <Settings className="w-5 h-5" />,
-    content: (
-      <div className="space-y-8">
-        <div>
-          <h3 className="text-xl font-bold mb-3">Technology Stack</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {[
-              ["Framework", "Next.js 16 (React 19)"],
-              ["Database", "Neon PostgreSQL (serverless)"],
-              ["ORM", "Drizzle ORM"],
-              ["Authentication", "JWT (7-day expiry)"],
-              ["File Storage", "AWS S3"],
-              ["Styling", "Tailwind CSS v4"],
-              ["Animations", "Framer Motion"],
-              ["Rich Text", "React Quill"],
-            ].map(([label, value]) => (
-              <div key={label} className="flex justify-between p-3 bg-muted/50 rounded-lg">
-                <span className="text-sm font-medium">{label}</span>
-                <span className="text-sm text-muted-foreground">{value}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <h3 className="text-xl font-bold mb-3">Database Tables</h3>
-          <p className="text-muted-foreground mb-4">
-            The system uses 22 database tables to store all data. Key tables include:
-          </p>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm border border-border rounded-xl overflow-hidden">
-              <thead>
-                <tr className="bg-muted">
-                  <th className="text-left p-3 font-semibold">Table</th>
-                  <th className="text-left p-3 font-semibold">Purpose</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {[
-                  ["lgas", "18 Local Government Areas"],
-                  ["staff", "All staff records"],
-                  ["statuses", "Employment statuses (HOD, Officer, etc.)"],
-                  ["ranks", "Staff ranks"],
-                  ["qualifications", "Educational qualifications"],
-                  ["change_requests", "Data/document change requests"],
-                  ["approval_logs", "Approval audit trail"],
-                  ["content_sections", "Landing page CMS content"],
-                  ["executives", "Executive team members"],
-                  ["landing_page_highlights", "Featured items on landing page"],
-                  ["disciplinary_cases", "Disciplinary records"],
-                  ["document_history", "Document upload history"],
-                ].map(([table, purpose]) => (
-                  <tr key={table} className="hover:bg-muted/50">
-                    <td className="p-3"><code className="bg-muted px-1.5 py-0.5 rounded text-xs">{table}</code></td>
-                    <td className="p-3 text-muted-foreground">{purpose}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div>
-          <h3 className="text-xl font-bold mb-3">AWS S3 Bucket Structure</h3>
-          <div className="bg-muted/50 border border-border rounded-xl p-4 font-mono text-sm space-y-1">
-            <p>s3://akoko-edo-lga/</p>
-            <p className="pl-4">├── documents/</p>
-            <p className="pl-8">├── staff/        <span className="text-muted-foreground"># Staff PDF documents</span></p>
-            <p className="pl-8">└── supporting/   <span className="text-muted-foreground"># Supporting documents</span></p>
-            <p className="pl-4">├── images/</p>
-            <p className="pl-8">├── lga/          <span className="text-muted-foreground"># LGA logo images</span></p>
-            <p className="pl-8">├── executives/   <span className="text-muted-foreground"># Executive photos</span></p>
-            <p className="pl-8">└── highlights/   <span className="text-muted-foreground"># Highlight images</span></p>
-            <p className="pl-4">└── help/         <span className="text-muted-foreground"># Documentation screenshots</span></p>
-          </div>
-        </div>
-
-        <div>
-          <h3 className="text-xl font-bold mb-3">Environment Variables</h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm border border-border rounded-xl overflow-hidden">
-              <thead>
-                <tr className="bg-muted">
-                  <th className="text-left p-3 font-semibold">Variable</th>
-                  <th className="text-left p-3 font-semibold">Purpose</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {[
-                  ["DATABASE_URL", "Neon PostgreSQL connection string"],
-                  ["JWT_SECRET", "Secret key for JWT token signing"],
-                  ["AWS_ACCESS_KEY_ID", "AWS access key for S3"],
-                  ["AWS_SECRET_ACCESS_KEY", "AWS secret key for S3"],
-                  ["AWS_S3_BUCKET", "S3 bucket name (akoko-edo-lga)"],
-                  ["AWS_REGION", "AWS region (eu-north-1)"],
-                ].map(([variable, purpose]) => (
-                  <tr key={variable} className="hover:bg-muted/50">
-                    <td className="p-3"><code className="bg-muted px-1.5 py-0.5 rounded text-xs">{variable}</code></td>
-                    <td className="p-3 text-muted-foreground">{purpose}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div>
-          <h3 className="text-xl font-bold mb-3">Database Management Commands</h3>
-          <div className="bg-muted/50 border border-border rounded-xl p-4 font-mono text-sm space-y-2">
-            <p><span className="text-muted-foreground"># Push schema changes to database</span></p>
-            <p>npm run db:push</p>
-            <p className="mt-2"><span className="text-muted-foreground"># Open database GUI</span></p>
-            <p>npm run db:studio</p>
-            <p className="mt-2"><span className="text-muted-foreground"># Seed initial data</span></p>
-            <p>npm run db:seed</p>
-          </div>
-        </div>
       </div>
     ),
   },
@@ -690,9 +643,9 @@ export default function HelpPage() {
               <div className="h-6 w-px bg-border" />
               <h1 className="text-lg font-bold">Help &amp; Documentation</h1>
             </div>
-            <Link href="/dashboard">
+            <Link href="/login">
               <button className="px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors">
-                Staff Dashboard
+                Login
               </button>
             </Link>
           </div>
@@ -702,7 +655,7 @@ export default function HelpPage() {
       <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-8">
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Sidebar */}
-          <aside className="lg:w-64 shrink-0">
+          <aside className="lg:w-72 shrink-0">
             <div className="lg:sticky lg:top-24 space-y-4">
               {/* Search */}
               <div className="relative">
@@ -722,7 +675,7 @@ export default function HelpPage() {
                   <button
                     key={section.id}
                     onClick={() => setActiveSection(section.id)}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                    className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
                       activeSection === section.id
                         ? "bg-primary/10 text-primary"
                         : "text-muted-foreground hover:text-foreground hover:bg-muted"

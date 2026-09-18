@@ -41,6 +41,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
     }
     const { section, title, subtitle, content } = parsed.data;
+    const metadata = (body as any).metadata || null;
 
     // Upsert: check if exists
     const existing = await db.query.contentSections.findFirst({
@@ -50,7 +51,7 @@ export async function POST(request: NextRequest) {
     if (existing) {
       await db
         .update(contentSections)
-        .set({ title, subtitle: subtitle || null, content, updatedAt: new Date() })
+        .set({ title, subtitle: subtitle || null, content, metadata, updatedAt: new Date() })
         .where(eq(contentSections.section, section));
     } else {
       await db.insert(contentSections).values({
@@ -59,6 +60,7 @@ export async function POST(request: NextRequest) {
         title,
         subtitle: subtitle || null,
         content: content ?? "",
+        metadata,
         updatedAt: new Date(),
       });
     }

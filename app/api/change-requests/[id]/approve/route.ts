@@ -9,6 +9,9 @@ import {
   getNextStatus,
   isWithinCorrectionWindow,
   getCorrectionWindowExpiry,
+  getDelegationInfo,
+  isChairmanDelegate,
+  type DelegationInfo,
 } from "@/lib/approval-utils";
 import { approveSchema, rejectSchema, correctSchema } from "@/lib/validations";
 import { logError } from "@/lib/error-logger";
@@ -49,7 +52,9 @@ export async function POST(
       return NextResponse.json({ error: "The item you're looking for couldn't be found." }, { status: 404 });
     }
 
-    const validation = canApproveAtLevel(changeRequest.status, user.role);
+    // Check for delegation
+    const delegationInfo = await getDelegationInfo(user.id);
+    const validation = canApproveAtLevel(changeRequest.status, user.role, delegationInfo);
     if (!validation.valid) {
       return NextResponse.json({ error: validation.reason }, { status: 400 });
     }
@@ -79,9 +84,12 @@ export async function POST(
       updateData.secretaryApprovedByName = approverName;
       updateData.secretaryApprovedAt = new Date();
       updateData.secretaryApprovedComments = parsed.data.comments || null;
-    } else if (user.role === "CHAIRMAN") {
-      updateData.chairmanApprovedBy = user.id;
-      updateData.chairmanApprovedByName = approverName;
+    } else if (user.role === "CHAIRMAN" || delegationInfo.isDelegate) {
+      // Delegate acts as chairman — log both in audit
+      const effectiveId = delegationInfo.isDelegate ? delegationInfo.delegatorId! : user.id;
+      const effectiveName = delegationInfo.isDelegate ? delegationInfo.delegatorName! : approverName;
+      updateData.chairmanApprovedBy = effectiveId;
+      updateData.chairmanApprovedByName = effectiveName;
       updateData.chairmanApprovedAt = new Date();
       updateData.chairmanApprovedComments = parsed.data.comments || null;
     }
@@ -115,6 +123,13 @@ export async function POST(
         comments: parsed.data.comments || null,
         selectedFields: changeRequest.selectedFields,
         changes: changeRequest.changes,
+        ...(delegationInfo.isDelegate && {
+          delegatedBy: {
+            id: delegationInfo.delegatorId,
+            name: delegationInfo.delegatorName,
+            role: "CHAIRMAN",
+          },
+        }),
       },
       id,
       changeRequest.staffId
@@ -176,7 +191,8 @@ export async function PUT(
       return NextResponse.json({ error: "The item you're looking for couldn't be found." }, { status: 404 });
     }
 
-    const validation = canApproveAtLevel(changeRequest.status, user.role);
+    const delegationInfo = await getDelegationInfo(user.id);
+    const validation = canApproveAtLevel(changeRequest.status, user.role, delegationInfo);
     if (!validation.valid) {
       return NextResponse.json({ error: validation.reason }, { status: 400 });
     }
@@ -200,7 +216,17 @@ export async function PUT(
     await createAuditLog(
       "CHANGE_REQUEST_REJECTED",
       { userId: user.id, userFullName: approverName, userRole: user.role as any, rank: user.role },
-      { changeRequestId: id, reason: reason.trim() },
+      {
+        changeRequestId: id,
+        reason: reason.trim(),
+        ...(delegationInfo.isDelegate && {
+          delegatedBy: {
+            id: delegationInfo.delegatorId,
+            name: delegationInfo.delegatorName,
+            role: "CHAIRMAN",
+          },
+        }),
+      },
       id,
       changeRequest.staffId
     );

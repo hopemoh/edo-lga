@@ -4,8 +4,9 @@ import { useState } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import type { Staff } from "@/lib/types"
-import { Edit2, Eye } from "lucide-react"
+import { Edit2, Eye, UserCheck } from "lucide-react"
 import StaffDetailModal from "./staff-detail-modal"
+import { useDelegation } from "@/hooks/use-delegations"
 
 interface StaffTableProps {
   staff: Staff[]
@@ -17,6 +18,7 @@ interface StaffTableProps {
 
 export default function StaffTable({ staff, onUpdate, onEdit, isAdmin = false, currentUser }: StaffTableProps) {
   const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null)
+  const { data: delegationData } = useDelegation()
 
   const formatDate = (date: Date) => {
     if (!date) return 'N/A'
@@ -35,7 +37,6 @@ export default function StaffTable({ staff, onUpdate, onEdit, isAdmin = false, c
           <table className="w-full text-sm">
             <thead className="bg-muted/50 border-b border-border/50">
               <tr>
-                <th className="px-4 py-3 text-left font-medium">S/N</th>
                 <th className="px-4 py-3 text-left font-medium">Name</th>
                 <th className="px-4 py-3 text-left font-medium">Sex</th>
                 <th className="px-4 py-3 text-left font-medium">Status</th>
@@ -48,8 +49,17 @@ export default function StaffTable({ staff, onUpdate, onEdit, isAdmin = false, c
             <tbody>
               {staff.map((s, index) => (
                 <tr key={s.id} className="border-b border-border/30 hover:bg-secondary/5 transition-colors">
-                    <td className="px-4 py-3 text-center font-medium text-muted-foreground">{s.serialNumber}</td>
-                    <td className="px-4 py-3 font-medium whitespace-nowrap">{s.name}</td>
+                    <td className="px-4 py-3 font-medium whitespace-nowrap">
+                      <span className="flex items-center gap-1.5">
+                        {s.name}
+                        {delegationData?.delegation?.delegateId === s.id && (
+                          <span className="inline-flex items-center gap-0.5 bg-purple-100 text-purple-700 text-[10px] font-medium px-1.5 py-0.5 rounded-full">
+                            <UserCheck className="w-2.5 h-2.5" />
+                            Delegate
+                          </span>
+                        )}
+                      </span>
+                    </td>
                     <td className="px-4 py-3">{s.sex}</td>
                     <td className="px-4 py-3">{(s.status as any)?.name || s.status}</td>
                     <td className="px-4 py-3">{s.rank?.name || 'N/A'}</td>

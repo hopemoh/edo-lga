@@ -241,8 +241,8 @@ export function useExecutives() {
 export function useCreateExecutive() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: any) =>
-      apiFetch("/api/executives", { method: "POST", body: JSON.stringify(data) }),
+    mutationFn: (data: FormData) =>
+      apiFetch("/api/executives", { method: "POST", body: data }),
     onSuccess: () => {
       toast.success("Executive added")
       qc.invalidateQueries({ queryKey: ["executives"] })
@@ -256,8 +256,8 @@ export function useCreateExecutive() {
 export function useUpdateExecutive() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) =>
-      apiFetch(`/api/executives/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+    mutationFn: ({ id, data }: { id: string; data: FormData }) =>
+      apiFetch(`/api/executives/${id}`, { method: "PUT", body: data }),
     onSuccess: () => {
       toast.success("Executive updated")
       qc.invalidateQueries({ queryKey: ["executives"] })
@@ -297,8 +297,8 @@ export function useHighlights(type?: string) {
 export function useCreateHighlight() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: any) =>
-      apiFetch("/api/highlights", { method: "POST", body: JSON.stringify(data) }),
+    mutationFn: (data: FormData) =>
+      apiFetch("/api/highlights", { method: "POST", body: data }),
     onSuccess: () => {
       toast.success("Highlight added")
       qc.invalidateQueries({ queryKey: ["highlights"] })
@@ -312,8 +312,8 @@ export function useCreateHighlight() {
 export function useUpdateHighlight() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) =>
-      apiFetch(`/api/highlights/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+    mutationFn: ({ id, data }: { id: string; data: FormData }) =>
+      apiFetch(`/api/highlights/${id}`, { method: "PUT", body: data }),
     onSuccess: () => {
       toast.success("Highlight updated")
       qc.invalidateQueries({ queryKey: ["highlights"] })

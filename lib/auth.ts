@@ -1,8 +1,17 @@
 import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
 import { NextRequest } from "next/server";
 
 const JWT_SECRET = process.env.JWT_SECRET!;
 const REFRESH_SECRET = JWT_SECRET + "_refresh";
+
+export async function hashPassword(password: string): Promise<string> {
+  return bcrypt.hash(password, 12);
+}
+
+export async function verifyPassword(password: string, hashedPassword: string): Promise<boolean> {
+  return bcrypt.compare(password, hashedPassword);
+}
 
 export function generateToken(payload: any): string {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: "15m" });

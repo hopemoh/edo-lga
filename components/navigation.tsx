@@ -14,10 +14,10 @@ const navItems = [
   { id: "mission-vision", label: "Mission & Vision" },
   { id: "map-section", label: "Explore LGAs" },
   { id: "appointments", label: "Appointments" },
-  { id: "posting", label: "Posting" },
   { id: "promotions", label: "Promotions" },
-  { id: "conversion", label: "Conversion" },
   { id: "training", label: "Training" },
+  { id: "posting", label: "Posting" },
+  { id: "conversion", label: "Conversion" },
   { id: "discipline", label: "Discipline" },
   { id: "recruitment", label: "Recruitment" },
   { id: "monitoring", label: "Monitoring" },
@@ -95,7 +95,7 @@ export default function Navigation({ onSectionClick }: NavigationProps) {
             </motion.div>
 
             {/* Desktop Navigation */}
-            <div className="hidden lg:flex items-center gap-1">
+            <div className="hidden lg:flex items-center gap-0.5">
               {navItems.slice(0, 8).map((item, index) => (
                 <motion.button
                   key={item.id}
@@ -103,7 +103,7 @@ export default function Navigation({ onSectionClick }: NavigationProps) {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
                   onClick={() => scrollToSection(item.id)}
-                  className={`px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${activeSection === item.id
+                  className={`px-2 py-1.5 text-xs font-medium rounded-lg transition-all duration-200 whitespace-nowrap ${activeSection === item.id
                       ? "text-primary bg-primary/10"
                       : "text-muted-foreground hover:text-foreground hover:bg-muted"
                     }`}
@@ -145,13 +145,13 @@ export default function Navigation({ onSectionClick }: NavigationProps) {
                   Help
                 </motion.button>
               </Link>
-              <Link href="/dashboard">
+              <Link href="/login">
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   className="hidden sm:block px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors shadow-lg shadow-primary/25"
                 >
-                  Staff Dashboard
+                  Login
                 </motion.button>
               </Link>
 
@@ -219,9 +219,9 @@ export default function Navigation({ onSectionClick }: NavigationProps) {
                       Help &amp; Documentation
                     </button>
                   </Link>
-                  <Link href="/dashboard" onClick={() => setIsMobileMenuOpen(false)}>
+                  <Link href="/login" onClick={() => setIsMobileMenuOpen(false)}>
                     <button className="w-full px-4 py-3 bg-primary text-primary-foreground font-medium rounded-lg hover:bg-primary/90 transition-colors">
-                      Staff Dashboard
+                      Login
                     </button>
                   </Link>
                 </div>

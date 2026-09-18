@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Card } from "@/components/ui/card"
 import { Eye, EyeOff } from "lucide-react"
 import { useLogin } from "@/hooks/use-auth"
+import { useAuthStore } from "@/lib/store"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { loginSchema } from "@/lib/validations"
@@ -30,8 +31,12 @@ export default function LoginPage() {
 
   const onSubmit = (data: LoginFormValues) => {
     loginMutation.mutate(data, {
-      onSuccess: () => {
-        router.push("/dashboard")
+      onSuccess: (response) => {
+        if (response.mustChangePassword) {
+          router.push("/change-password")
+        } else {
+          router.push("/dashboard")
+        }
       },
     })
   }
@@ -99,13 +104,6 @@ export default function LoginPage() {
             {loginMutation.isPending ? "Logging in..." : "Login"}
           </Button>
         </form>
-
-        <div className="mt-4 p-3 bg-muted rounded-md text-sm">
-          <p className="font-medium">Test Credentials:</p>
-          <p><span className="text-muted-foreground">Phone:</span> 08123456789</p>
-          <p><span className="text-muted-foreground">DOB:</span> 01/15/90 or 1990-01-15</p>
-          <p className="text-xs text-muted-foreground mt-2">Use your staff member's actual DOB for login</p>
-        </div>
       </Card>
     </div>
   )

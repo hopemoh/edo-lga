@@ -47,6 +47,7 @@ export function useApproveRequest() {
       toast.success("Request approved")
       qc.invalidateQueries({ queryKey: ["change-requests"] })
       qc.invalidateQueries({ queryKey: ["approval-logs"] })
+      qc.invalidateQueries({ queryKey: ["logs"] })
     },
     onError: () => {
       toast.error("Couldn't save your changes. Please try again.")
@@ -66,6 +67,7 @@ export function useRejectRequest() {
       toast.success("Request rejected")
       qc.invalidateQueries({ queryKey: ["change-requests"] })
       qc.invalidateQueries({ queryKey: ["approval-logs"] })
+      qc.invalidateQueries({ queryKey: ["logs"] })
     },
     onError: () => {
       toast.error("Couldn't save your changes. Please try again.")
@@ -86,6 +88,7 @@ export function useCorrectRequest() {
       qc.invalidateQueries({ queryKey: ["change-requests"] })
       qc.invalidateQueries({ queryKey: ["staff"] })
       qc.invalidateQueries({ queryKey: ["approval-logs"] })
+      qc.invalidateQueries({ queryKey: ["logs"] })
     },
     onError: () => {
       toast.error("Couldn't save your changes. Please try again.")

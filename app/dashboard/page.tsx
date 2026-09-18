@@ -12,8 +12,11 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const user = localStorage.getItem("currentUser")
+    const mustChangePassword = localStorage.getItem("mustChangePassword")
     if (!user) {
       router.push("/login")
+    } else if (mustChangePassword === "true") {
+      router.push("/change-password")
     } else {
       setIsAuthenticated(true)
     }

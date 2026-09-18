@@ -20,9 +20,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
     }
     const { phoneNumber, dateOfBirth } = parsed.data;
+    const normalizedPhone = phoneNumber.replace(/^0+/, "");
 
     const staffRecord = await db.query.staff.findFirst({
-      where: eq(staff.phoneNumber, phoneNumber),
+      where: eq(staff.phoneNumber, normalizedPhone),
       with: {
         lga: true,
       },
@@ -80,6 +81,7 @@ export async function POST(request: NextRequest) {
         phoneNumber: staffRecord.phoneNumber,
         statusId: staffRecord.statusId,
       },
+      mustChangePassword: !staffRecord.hasChangedPassword,
     });
 
     response.cookies.set("refresh_token", refreshToken, {
