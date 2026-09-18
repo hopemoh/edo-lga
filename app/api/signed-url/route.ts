@@ -4,7 +4,7 @@ import { logError } from "@/lib/error-logger";
 import { getTokenFromRequest, verifyToken } from "@/lib/auth";
 import { rateLimit } from "@/lib/rate-limit";
 
-const PUBLIC_PREFIXES = ["images/executives/", "images/highlights/", "images/lga/"];
+const PUBLIC_PREFIXES = ["images/executives/", "images/highlights/", "images/lga/", "help/"];
 
 export async function GET(request: NextRequest) {
   try {

@@ -33,6 +33,7 @@ export function useCreateStaff() {
     onSuccess: () => {
       toast.success("Staff record created")
       qc.invalidateQueries({ queryKey: ["staff"] })
+      qc.invalidateQueries({ queryKey: ["logs"] })
     },
     onError: () => {
       toast.error("Couldn't save your changes. Please try again.")
@@ -69,6 +70,7 @@ export function useUploadDocument() {
     onSuccess: () => {
       toast.success("Document uploaded")
       qc.invalidateQueries({ queryKey: ["staff"] })
+      qc.invalidateQueries({ queryKey: ["logs"] })
     },
     onError: () => {
       toast.error("Couldn't save your changes. Please try again.")
@@ -87,6 +89,7 @@ export function useBulkImport() {
     onSuccess: () => {
       toast.success("Import completed")
       qc.invalidateQueries({ queryKey: ["staff"] })
+      qc.invalidateQueries({ queryKey: ["logs"] })
     },
     onError: () => {
       toast.error("Import failed. Please try again.")
@@ -104,6 +107,7 @@ export function useBulkUpdate() {
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["staff"] })
+      qc.invalidateQueries({ queryKey: ["logs"] })
     },
     onError: () => {
       toast.error("Update failed. Please try again.")
@@ -120,6 +124,7 @@ export function useResetPassword() {
       }),
     onSuccess: (data: any) => {
       qc.invalidateQueries({ queryKey: ["staff"] })
+      qc.invalidateQueries({ queryKey: ["logs"] })
       toast.success(data?.message || "Password reset successfully")
     },
     onError: () => {

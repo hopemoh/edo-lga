@@ -12,6 +12,7 @@ import DataChangeHistoryModal from "./data-change-history-modal"
 import RoleAssignmentModal from "../admin/role-assignment-modal"
 import DelegationModal from "../admin/delegation-modal"
 import { useChangeRequests } from "@/hooks/use-change-requests"
+import { useResetPassword } from "@/hooks/use-staff"
 import { useAuthStore } from "@/lib/store"
 import { toast } from "sonner"
 
@@ -39,7 +40,7 @@ export default function StaffDetailModal({ staff, onClose, onUpdate, onEdit }: S
   const [showRoleAssignment, setShowRoleAssignment] = useState(false)
   const [showResetPassword, setShowResetPassword] = useState(false)
   const [showDelegation, setShowDelegation] = useState(false)
-  const [resettingPassword, setResettingPassword] = useState(false)
+  const resetPasswordMutation = useResetPassword()
   const [initialSelectedFields, setInitialSelectedFields] = useState<string[]>([])
   const [canReplace, setCanReplace] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
@@ -523,37 +524,21 @@ export default function StaffDetailModal({ staff, onClose, onUpdate, onEdit }: S
               variant="outline"
               size="sm"
               onClick={() => setShowResetPassword(false)}
-              disabled={resettingPassword}
+              disabled={resetPasswordMutation.isPending}
             >
               Cancel
             </Button>
             <Button
               variant="destructive"
               size="sm"
-              disabled={resettingPassword}
-              onClick={async () => {
-                setResettingPassword(true)
-                try {
-                  const token = localStorage.getItem("token")
-                  const res = await fetch(`/api/staff/${staff.id}/reset-password`, {
-                    method: "POST",
-                    headers: { Authorization: `Bearer ${token}` },
-                  })
-                  const data = await res.json()
-                  if (res.ok) {
-                    toast.success(data.message || "Password reset successfully")
-                    setShowResetPassword(false)
-                  } else {
-                    toast.error(data.error || "Couldn't reset password. Please try again.")
-                  }
-                } catch {
-                  toast.error("Couldn't reset password. Please try again.")
-                } finally {
-                  setResettingPassword(false)
-                }
+              disabled={resetPasswordMutation.isPending}
+              onClick={() => {
+                resetPasswordMutation.mutate(staff.id, {
+                  onSuccess: () => setShowResetPassword(false),
+                })
               }}
             >
-              {resettingPassword ? "Resetting..." : "Reset Password"}
+              {resetPasswordMutation.isPending ? "Resetting..." : "Reset Password"}
             </Button>
           </DialogFooter>
         </DialogContent>
