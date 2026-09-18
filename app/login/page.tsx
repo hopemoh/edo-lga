@@ -21,13 +21,16 @@ export default function LoginPage() {
   const router = useRouter()
   const loginMutation = useLogin()
 
-  const { register, handleSubmit, formState: { errors } } = useForm<LoginFormValues>({
+  const { register, handleSubmit, formState: { errors }, watch } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
       phoneNumber: "",
       dateOfBirth: "",
+      password: "",
     },
   })
+
+  const phoneNumber = watch("phoneNumber")
 
   const onSubmit = (data: LoginFormValues) => {
     loginMutation.mutate(data, {

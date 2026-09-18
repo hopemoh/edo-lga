@@ -3,6 +3,7 @@ import { z } from "zod"
 export const loginSchema = z.object({
   phoneNumber: z.string().min(10, "Phone number must be at least 10 digits"),
   dateOfBirth: z.string().min(1, "Date of birth is required"),
+  password: z.string().optional(),
 })
 
 export const staffCreateSchema = z.object({

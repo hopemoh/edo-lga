@@ -24,7 +24,12 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get("type");
 
     let whereConditions: any[] = [];
-    if (staffId) whereConditions.push(eq(changeRequests.staffId, staffId));
+    // STAFF can only see their own change requests
+    if (user.role === "STAFF") {
+      whereConditions.push(eq(changeRequests.staffId, user.id));
+    } else if (staffId) {
+      whereConditions.push(eq(changeRequests.staffId, staffId));
+    }
     if (status) whereConditions.push(eq(changeRequests.status, status as any));
     if (type) whereConditions.push(eq(changeRequests.type, type as any));
 

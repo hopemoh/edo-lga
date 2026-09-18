@@ -291,20 +291,18 @@ export default function StaffDashboard() {
                     Activity Logs
                   </Button>
                 )}
-                {isAdmin() && (
-                  <Button
-                    variant={view === "requests" ? "default" : "outline"}
-                    onClick={() => setView("requests")}
-                    className={`${view === "requests" ? "bg-linear-to-r from-primary to-accent" : ""} relative`}
-                  >
-                    Change Requests
-                    {changeRequestCount > 0 && (
-                      <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                        {changeRequestCount}
-                      </span>
-                    )}
-                  </Button>
-                )}
+                <Button
+                  variant={view === "requests" ? "default" : "outline"}
+                  onClick={() => setView("requests")}
+                  className={`${view === "requests" ? "bg-linear-to-r from-primary to-accent" : ""} relative`}
+                >
+                  Change Requests
+                  {changeRequestCount > 0 && (
+                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      {changeRequestCount}
+                    </span>
+                  )}
+                </Button>
                 <Button
                   variant={view === "discipline" ? "default" : "outline"}
                   onClick={() => setView("discipline")}
@@ -312,16 +310,14 @@ export default function StaffDashboard() {
                 >
                   Disciplinary Cases
                 </Button>
-                {isAdmin() && (
-                  <Button
-                    variant={view === "approvals" ? "default" : "outline"}
-                    onClick={() => setView("approvals")}
-                    className={view === "approvals" ? "bg-linear-to-r from-primary to-accent" : ""}
-                  >
-                    <CheckCircle className="mr-2 h-4 w-4" />
-                    Approval Logs
-                  </Button>
-                )}
+                <Button
+                  variant={view === "approvals" ? "default" : "outline"}
+                  onClick={() => setView("approvals")}
+                  className={view === "approvals" ? "bg-linear-to-r from-primary to-accent" : ""}
+                >
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Approval Logs
+                </Button>
               </div>
             </div>
 
