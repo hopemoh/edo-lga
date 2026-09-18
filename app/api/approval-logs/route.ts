@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { approvalLogs, changeRequests, staff } from "@/lib/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, inArray } from "drizzle-orm";
 import { getTokenFromRequest, verifyToken } from "@/lib/auth";
 import { logError } from "@/lib/error-logger";
 
@@ -13,21 +13,44 @@ export async function GET(request: NextRequest) {
     }
 
     const user = verifyToken(token);
-    if (!user || !["ADMIN", "SECRETARY", "CHAIRMAN"].includes(user.role)) {
-      return NextResponse.json({ error: "You don't have permission to do this." }, { status: 403 });
+    if (!user) {
+      return NextResponse.json({ error: "You need to log in to access this." }, { status: 401 });
     }
 
-    const logs = await db.query.approvalLogs.findMany({
-      with: {
-        changeRequest: {
-          with: {
-            staff: true,
+    let logs;
+    if (user.role === "STAFF") {
+      const staffChangeRequests = await db.query.changeRequests.findMany({
+        where: eq(changeRequests.staffId, user.id),
+      });
+      const requestIds = staffChangeRequests.map((r) => r.id);
+
+      logs = requestIds.length > 0
+        ? await db.query.approvalLogs.findMany({
+            where: inArray(approvalLogs.changeRequestId, requestIds),
+            with: {
+              changeRequest: {
+                with: {
+                  staff: true,
+                },
+              },
+            },
+            orderBy: [desc(approvalLogs.timestamp)],
+            limit: 100,
+          })
+        : [];
+    } else {
+      logs = await db.query.approvalLogs.findMany({
+        with: {
+          changeRequest: {
+            with: {
+              staff: true,
+            },
           },
         },
-      },
-      orderBy: [desc(approvalLogs.timestamp)],
-      limit: 100,
-    });
+        orderBy: [desc(approvalLogs.timestamp)],
+        limit: 100,
+      });
+    }
 
     return NextResponse.json({ data: logs, total: logs.length });
   } catch (error) {

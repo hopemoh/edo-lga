@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { staff, lgas } from "@/lib/db/schema";
-import { generateToken, generateRefreshToken } from "@/lib/auth";
+import { generateToken, generateRefreshToken, verifyPassword } from "@/lib/auth";
 import { loginSchema } from "@/lib/validations";
 import { logError } from "@/lib/error-logger";
 import { rateLimit } from "@/lib/rate-limit";
@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
     }
-    const { phoneNumber, dateOfBirth } = parsed.data;
+    const { phoneNumber, dateOfBirth, password } = parsed.data;
     const normalizedPhone = phoneNumber.replace(/^0+/, "");
 
     const staffRecord = await db.query.staff.findFirst({
@@ -31,45 +31,67 @@ export async function POST(request: NextRequest) {
 
     if (!staffRecord) {
       return NextResponse.json(
-        { error: "Invalid phone number" },
+        { error: "Invalid phone number or password" },
         { status: 401 }
       );
     }
 
-    // Parse DB dateOfBirth safely
-    const dobRaw = staffRecord.dateOfBirth;
-    const dobDate = dobRaw instanceof Date ? dobRaw : new Date(String(dobRaw));
-    if (isNaN(dobDate.getTime())) {
-      return NextResponse.json({ error: "Invalid date format" }, { status: 400 });
-    }
-    const dobY = dobDate.getUTCFullYear();
-    const dobM = String(dobDate.getUTCMonth() + 1).padStart(2, "0");
-    const dobD = String(dobDate.getUTCDate()).padStart(2, "0");
-    const dobStr = `${dobY}-${dobM}-${dobD}`;
-
-    // Parse provided DOB — supports YYYY-MM-DD or MM/DD/YYYY or MM/DD/YY
-    let providedStr: string | null = null;
-    const isoMatch = dateOfBirth.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    const slashMatch = dateOfBirth.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
-
-    if (isoMatch) {
-      const [, y, m, d] = isoMatch;
-      providedStr = `${y}-${m}-${d}`;
-    } else if (slashMatch) {
-      let [, month, day, year] = slashMatch;
-      if (year.length === 2) {
-        year = (parseInt(year) > 50 ? "19" : "20") + year;
+    // If user has changed password, validate against password hash
+    if (staffRecord.hasChangedPassword && staffRecord.passwordHash) {
+      const loginPassword = password || dateOfBirth; // fallback to DOB for backward compat
+      const valid = await verifyPassword(loginPassword, staffRecord.passwordHash);
+      if (!valid) {
+        return NextResponse.json(
+          { error: "Invalid phone number or password" },
+          { status: 401 }
+        );
       }
-      providedStr = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
     } else {
-      return NextResponse.json({ error: "Use YYYY-MM-DD or MM/DD/YYYY format" }, { status: 400 });
-    }
+      // First-time login: validate against DOB
+      const dobRaw = staffRecord.dateOfBirth;
+      const dobDate = dobRaw instanceof Date ? dobRaw : new Date(String(dobRaw));
+      if (isNaN(dobDate.getTime())) {
+        return NextResponse.json({ error: "Invalid date format" }, { status: 400 });
+      }
+      const dobY = dobDate.getUTCFullYear();
+      const dobM = String(dobDate.getUTCMonth() + 1).padStart(2, "0");
+      const dobD = String(dobDate.getUTCDate()).padStart(2, "0");
+      const dobStr = `${dobY}-${dobM}-${dobD}`;
 
-    if (dobStr !== providedStr) {
-      return NextResponse.json(
-        { error: "Invalid date of birth" },
-        { status: 401 }
-      );
+      let providedStr: string | null = null;
+      const trimmed = dateOfBirth.trim();
+      const isoMatch = trimmed.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+      const slashMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+      const dashMatch = trimmed.match(/^(\d{1,2})-(\d{1,2})-(\d{2,4})$/);
+
+      if (isoMatch) {
+        const [, y, m, d] = isoMatch;
+        providedStr = `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+      } else if (slashMatch || dashMatch) {
+        const match = slashMatch || dashMatch;
+        let [, part1, part2, year] = match!;
+        if (year.length === 2) {
+          year = (parseInt(year) > 50 ? "19" : "20") + year;
+        }
+        let month: string, day: string;
+        if (parseInt(part1) > 12) {
+          day = part1;
+          month = part2;
+        } else {
+          month = part1;
+          day = part2;
+        }
+        providedStr = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+      } else {
+        return NextResponse.json({ error: "Use YYYY-MM-DD or MM/DD/YYYY format" }, { status: 400 });
+      }
+
+      if (dobStr !== providedStr) {
+        return NextResponse.json(
+          { error: "Invalid date of birth" },
+          { status: 401 }
+        );
+      }
     }
 
     const token = generateToken({

@@ -17,7 +17,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "You need to log in to access this." }, { status: 401 });
     }
 
+    let whereCondition;
+    if (user.role === "STAFF") {
+      whereCondition = eq(disciplinaryCases.staffId, user.id);
+    }
+
     const cases = await db.query.disciplinaryCases.findMany({
+      where: whereCondition,
       with: {
         staff: {
           with: {
