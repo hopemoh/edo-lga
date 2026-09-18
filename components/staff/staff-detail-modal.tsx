@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { motion } from "framer-motion"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { X, Mail, Briefcase, Award, Upload, FileEdit, FileText, ShieldCheck, Calendar, MapPin, Hash, User, KeyRound } from "lucide-react"
 import type { Staff } from "@/lib/types"
 import ChangeRequestModal from "../admin/change-request-modal"
@@ -35,6 +36,8 @@ export default function StaffDetailModal({ staff, onClose, onUpdate, onEdit }: S
   const [showDocumentHistory, setShowDocumentHistory] = useState(false)
   const [showDataHistory, setShowDataHistory] = useState(false)
   const [showRoleAssignment, setShowRoleAssignment] = useState(false)
+  const [showResetPassword, setShowResetPassword] = useState(false)
+  const [resettingPassword, setResettingPassword] = useState(false)
   const [initialSelectedFields, setInitialSelectedFields] = useState<string[]>([])
   const [canReplace, setCanReplace] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
@@ -449,27 +452,7 @@ export default function StaffDetailModal({ staff, onClose, onUpdate, onEdit }: S
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={async () => {
-                    if (!confirm(`Reset password for ${staff.name}? They will use phone + DOB to login and must set a new password.`)) return
-                    try {
-                      const token = localStorage.getItem("token")
-                      const res = await fetch(`/api/staff/${staff.id}/reset-password`, {
-                        method: "POST",
-                        headers: { Authorization: `Bearer ${token}` },
-                      })
-                      const data = await res.json()
-                      if (res.ok) {
-                        const { toast } = await import("sonner")
-                        toast.success(data.message || "Password reset successfully")
-                      } else {
-                        const { toast } = await import("sonner")
-                        toast.error(data.error || "Couldn't reset password. Please try again.")
-                      }
-                    } catch {
-                      const { toast } = await import("sonner")
-                      toast.error("Couldn't reset password. Please try again.")
-                    }
-                  }}
+                  onClick={() => setShowResetPassword(true)}
                   className="bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200 text-xs"
                 >
                   <KeyRound className="w-3 h-3 mr-1" />
@@ -515,6 +498,55 @@ export default function StaffDetailModal({ staff, onClose, onUpdate, onEdit }: S
           if (onUpdate) onUpdate(updatedStaff)
         }}
       />
+
+      <Dialog open={showResetPassword} onOpenChange={setShowResetPassword}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reset Password</DialogTitle>
+            <DialogDescription>
+              Reset password for <span className="font-semibold text-foreground">{staff.name}</span>? They will use phone + DOB to login and must set a new password.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowResetPassword(false)}
+              disabled={resettingPassword}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              disabled={resettingPassword}
+              onClick={async () => {
+                setResettingPassword(true)
+                try {
+                  const token = localStorage.getItem("token")
+                  const res = await fetch(`/api/staff/${staff.id}/reset-password`, {
+                    method: "POST",
+                    headers: { Authorization: `Bearer ${token}` },
+                  })
+                  const data = await res.json()
+                  if (res.ok) {
+                    toast.success(data.message || "Password reset successfully")
+                    setShowResetPassword(false)
+                  } else {
+                    toast.error(data.error || "Couldn't reset password. Please try again.")
+                  }
+                } catch {
+                  toast.error("Couldn't reset password. Please try again.")
+                } finally {
+                  setResettingPassword(false)
+                }
+              }}
+            >
+              {resettingPassword ? "Resetting..." : "Reset Password"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }
