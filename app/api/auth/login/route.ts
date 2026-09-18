@@ -36,18 +36,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const dob = new Date(staffRecord.dateOfBirth);
-    const providedDob = new Date(dateOfBirth);
-
-    if (isNaN(dob.getTime()) || isNaN(providedDob.getTime())) {
-      return NextResponse.json(
-        { error: "Invalid date format" },
-        { status: 400 }
-      );
+    // Parse DB dateOfBirth safely
+    const dobRaw = staffRecord.dateOfBirth;
+    const dobDate = dobRaw instanceof Date ? dobRaw : new Date(String(dobRaw));
+    if (isNaN(dobDate.getTime())) {
+      return NextResponse.json({ error: "Invalid date format" }, { status: 400 });
     }
+    const dobY = dobDate.getUTCFullYear();
+    const dobM = String(dobDate.getUTCMonth() + 1).padStart(2, "0");
+    const dobD = String(dobDate.getUTCDate()).padStart(2, "0");
+    const dobStr = `${dobY}-${dobM}-${dobD}`;
 
-    const dobStr = dob.toISOString().split("T")[0];
-    const providedStr = providedDob.toISOString().split("T")[0];
+    // Parse provided DOB — supports YYYY-MM-DD or MM/DD/YYYY or MM/DD/YY
+    let providedStr: string | null = null;
+    const isoMatch = dateOfBirth.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    const slashMatch = dateOfBirth.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+
+    if (isoMatch) {
+      const [, y, m, d] = isoMatch;
+      providedStr = `${y}-${m}-${d}`;
+    } else if (slashMatch) {
+      let [, month, day, year] = slashMatch;
+      if (year.length === 2) {
+        year = (parseInt(year) > 50 ? "19" : "20") + year;
+      }
+      providedStr = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+    } else {
+      return NextResponse.json({ error: "Use YYYY-MM-DD or MM/DD/YYYY format" }, { status: 400 });
+    }
 
     if (dobStr !== providedStr) {
       return NextResponse.json(
