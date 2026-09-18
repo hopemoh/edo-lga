@@ -1,6 +1,6 @@
 import { db } from "./db";
-import { changeRequests, approvalLogs, auditLogs } from "./db/schema";
-import { eq } from "drizzle-orm";
+import { changeRequests, approvalLogs, auditLogs, delegations, staff } from "./db/schema";
+import { eq, and } from "drizzle-orm";
 
 const ADMIN_CORRECTION_WINDOW_HOURS = 24;
 
@@ -9,6 +9,42 @@ export interface ApprovalContext {
   userFullName: string;
   userRole: "STAFF" | "ADMIN" | "SECRETARY" | "CHAIRMAN";
   rank: string;
+}
+
+export interface DelegationInfo {
+  isDelegate: boolean;
+  delegatorId?: string;
+  delegatorName?: string;
+}
+
+export async function getDelegationInfo(userId: string): Promise<DelegationInfo> {
+  const active = await db.query.delegations.findFirst({
+    where: and(
+      eq(delegations.delegateId, userId),
+      eq(delegations.isActive, true)
+    ),
+    with: {
+      // We'll do a separate query for the delegator name
+    },
+  });
+
+  if (!active) {
+    return { isDelegate: false };
+  }
+
+  const delegator = await db.query.staff.findFirst({
+    where: eq(staff.id, active.delegatorId),
+  });
+
+  return {
+    isDelegate: true,
+    delegatorId: active.delegatorId,
+    delegatorName: delegator?.name,
+  };
+}
+
+export function isChairmanDelegate(delegationInfo: DelegationInfo): boolean {
+  return delegationInfo.isDelegate;
 }
 
 export function isWithinCorrectionWindow(createdAt: Date): boolean {
@@ -58,7 +94,8 @@ export async function validateAdminCorrection(
 
 export function canApproveAtLevel(
   status: string,
-  userRole: string
+  userRole: string,
+  delegationInfo?: DelegationInfo
 ): { valid: boolean; reason?: string } {
   const validTransitions: Record<string, string[]> = {
     PENDING: ["ADMIN"],
@@ -72,7 +109,12 @@ export function canApproveAtLevel(
     return { valid: false, reason: `Invalid status: ${status}` };
   }
 
-  if (!allowedRoles.includes(userRole)) {
+  // Check if user is a CHAIRMAN delegate (inherits CHAIRMAN permissions)
+  const effectiveRole = (delegationInfo?.isDelegate && userRole !== "CHAIRMAN" && allowedRoles.includes("CHAIRMAN"))
+    ? "CHAIRMAN"
+    : userRole;
+
+  if (!allowedRoles.includes(effectiveRole)) {
     return {
       valid: false,
       reason: `${userRole} cannot approve at this stage. Required: ${allowedRoles.join(", ")}`,

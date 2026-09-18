@@ -368,6 +368,18 @@ export const errorLogs = pgTable(
   ]
 );
 
+export const delegations = pgTable(
+  "delegations",
+  {
+    id: text("id").primaryKey(),
+    delegatorId: text("delegatorId").notNull().references(() => staff.id),
+    delegateId: text("delegateId").notNull().references(() => staff.id),
+    isActive: boolean("isActive").notNull().default(true),
+    createdAt: timestamp("createdAt").notNull().defaultNow(),
+    revokedAt: timestamp("revokedAt"),
+  }
+);
+
 export const executives = pgTable(
   "executives",
   {

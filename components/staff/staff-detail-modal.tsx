@@ -4,12 +4,13 @@ import { motion } from "framer-motion"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
-import { X, Mail, Briefcase, Award, Upload, FileEdit, FileText, ShieldCheck, Calendar, MapPin, Hash, User, KeyRound } from "lucide-react"
+import { X, Mail, Briefcase, Award, Upload, FileEdit, FileText, ShieldCheck, Calendar, MapPin, Hash, User, KeyRound, UserCheck } from "lucide-react"
 import type { Staff } from "@/lib/types"
 import ChangeRequestModal from "../admin/change-request-modal"
 import DocumentHistoryModal from "./document-history-modal"
 import DataChangeHistoryModal from "./data-change-history-modal"
 import RoleAssignmentModal from "../admin/role-assignment-modal"
+import DelegationModal from "../admin/delegation-modal"
 import { useChangeRequests } from "@/hooks/use-change-requests"
 import { useAuthStore } from "@/lib/store"
 import { toast } from "sonner"
@@ -37,6 +38,7 @@ export default function StaffDetailModal({ staff, onClose, onUpdate, onEdit }: S
   const [showDataHistory, setShowDataHistory] = useState(false)
   const [showRoleAssignment, setShowRoleAssignment] = useState(false)
   const [showResetPassword, setShowResetPassword] = useState(false)
+  const [showDelegation, setShowDelegation] = useState(false)
   const [resettingPassword, setResettingPassword] = useState(false)
   const [initialSelectedFields, setInitialSelectedFields] = useState<string[]>([])
   const [canReplace, setCanReplace] = useState(false)
@@ -458,6 +460,15 @@ export default function StaffDetailModal({ staff, onClose, onUpdate, onEdit }: S
                   <KeyRound className="w-3 h-3 mr-1" />
                   Reset Password
                 </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowDelegation(true)}
+                  className="bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-200 text-xs"
+                >
+                  <UserCheck className="w-3 h-3 mr-1" />
+                  Delegate
+                </Button>
               </>
             )}
             <Button variant="outline" size="sm" onClick={onClose} className="text-xs">
@@ -547,6 +558,12 @@ export default function StaffDetailModal({ staff, onClose, onUpdate, onEdit }: S
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <DelegationModal
+        open={showDelegation}
+        onClose={() => setShowDelegation(false)}
+        staff={staff}
+      />
     </>
   )
 }
