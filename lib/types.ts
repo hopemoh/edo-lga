@@ -40,7 +40,7 @@ export interface Staff {
 export interface LogEntry {
   id: string;
   timestamp: Date;
-  action: "CREATE" | "UPDATE";
+  action: "CREATE" | "UPDATE" | "DELETE" | "DELEGATION_CREATED" | "DELEGATION_REVOKED";
   details: string;
   userId: string;
   userFullName: string;

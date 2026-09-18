@@ -18,13 +18,24 @@ export default function ActivityLog({ logs }: ActivityLogProps) {
         return <Edit2 className="w-5 h-5 text-blue-500" />
       case "DELETE":
         return <Trash2 className="w-5 h-5 text-destructive" />
+      case "DELEGATION_CREATED":
+        return <CheckCircle2 className="w-5 h-5 text-purple-500" />
+      case "DELEGATION_REVOKED":
+        return <Trash2 className="w-5 h-5 text-orange-500" />
       default:
         return <AlertCircle className="w-5 h-5 text-muted-foreground" />
     }
   }
 
   const getActionLabel = (action: string) => {
-    return action.charAt(0) + action.slice(1).toLowerCase()
+    const labels: Record<string, string> = {
+      CREATE: "Created",
+      UPDATE: "Updated",
+      DELETE: "Deleted",
+      DELEGATION_CREATED: "Delegation Created",
+      DELEGATION_REVOKED: "Delegation Revoked",
+    }
+    return labels[action] || action
   }
 
   if (logs.length === 0) {

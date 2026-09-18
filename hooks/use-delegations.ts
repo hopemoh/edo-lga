@@ -33,6 +33,7 @@ export function useCreateDelegation() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["delegations"] });
+      queryClient.invalidateQueries({ queryKey: ["logs"] });
       toast.success(data.message || "Delegation created");
     },
     onError: (error: any) => {
@@ -50,6 +51,7 @@ export function useRevokeDelegation() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["delegations"] });
+      queryClient.invalidateQueries({ queryKey: ["logs"] });
       toast.success(data.message || "Delegation revoked");
     },
     onError: (error: any) => {

@@ -111,6 +111,7 @@ const sections: Section[] = [
                 ["1st-level approval of requests", false, true, true, true],
                 ["2nd-level approval of requests", false, false, true, true],
                 ["Final approval of requests", false, false, false, true],
+                ["Delegate approval authority", false, false, false, true],
                 ["System settings", false, false, false, true],
               ].map(([label, staff, admin, sec, chair], i) => (
                 <tr key={i} className="hover:bg-muted/50">
@@ -508,6 +509,33 @@ const sections: Section[] = [
             <li>Confirm the reset in the dialog</li>
             <li>The staff member will use phone + DOB to login and must set a new password</li>
           </ol>
+        </div>
+
+        <div>
+          <h3 className="text-xl font-bold mb-3">Delegating Approval Authority</h3>
+          <p className="text-muted-foreground mb-4">
+            The Chairman can delegate a staff member to approve change requests on their behalf.
+            The delegate inherits CHAIRMAN-level approval permissions while the delegation is active.
+            Both the delegate and the Chairman are logged in the audit trail for every action.
+          </p>
+          <ol className="list-decimal list-inside space-y-2 text-muted-foreground mb-4">
+            <li>Open the profile of the staff member you want to delegate</li>
+            <li>Click <strong>&quot;Delegate&quot;</strong> (purple button)</li>
+            <li>Review the confirmation dialog and click <strong>&quot;Confirm Delegate&quot;</strong></li>
+            <li>The delegate can now approve requests at the Chairman level</li>
+          </ol>
+          <div className="bg-muted/50 border border-border rounded-xl p-4 space-y-2">
+            <p className="text-sm font-medium">Switching Delegates</p>
+            <p className="text-sm text-muted-foreground">
+              If a delegate is already active, clicking &quot;Delegate&quot; on a different staff member
+              will show a switch dialog. The previous delegation is revoked automatically.
+            </p>
+            <p className="text-sm font-medium mt-3">Revoking Delegation</p>
+            <p className="text-sm text-muted-foreground">
+              Open the current delegate&apos;s profile and click <strong>&quot;Delegate&quot;</strong> to see
+              the revoke option. Revoking restores full control to the Chairman only.
+            </p>
+          </div>
         </div>
 
         <div>

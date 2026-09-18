@@ -16,7 +16,7 @@ import { relations } from "drizzle-orm";
 
 export const roleEnum = pgEnum("Role", ["STAFF", "ADMIN", "SECRETARY", "CHAIRMAN"]);
 
-export const logActionEnum = pgEnum("LogAction", ["CREATE", "UPDATE", "DELETE"]);
+export const logActionEnum = pgEnum("LogAction", ["CREATE", "UPDATE", "DELETE", "DELEGATION_CREATED", "DELEGATION_REVOKED"]);
 
 export const changeRequestStatusEnum = pgEnum("ChangeRequestStatus", [
   "PENDING",
