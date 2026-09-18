@@ -57,7 +57,7 @@ const sections: Section[] = [
 
         <div className="bg-muted/50 border border-border rounded-xl p-4">
           <p className="text-sm font-medium mb-1">Login Format</p>
-          <p className="text-sm text-muted-foreground">Phone: <code className="bg-muted px-1.5 py-0.5 rounded">8123456789</code> (without leading 0)</p>
+          <p className="text-sm text-muted-foreground">Phone: <code className="bg-muted px-1.5 py-0.5 rounded">08123456789</code> (leading 0 is optional — it gets stripped automatically)</p>
           <p className="text-sm text-muted-foreground">DOB: <code className="bg-muted px-1.5 py-0.5 rounded">1980-03-03</code></p>
         </div>
 
@@ -372,8 +372,9 @@ const sections: Section[] = [
         <div>
           <h3 className="text-xl font-bold mb-3">Overview</h3>
           <p className="text-muted-foreground">
-            The public landing page is fully content-manageable. All text sections, executive photos, and
-            highlight items can be edited from the dashboard without code changes.
+            The public landing page is fully content-manageable. All text sections, executive photos,
+            highlight items, footer content, and annual report downloads can be edited from the dashboard
+            without code changes.
           </p>
         </div>
 
@@ -428,6 +429,32 @@ const sections: Section[] = [
             alt="LGA edit form with description, landmarks, and image upload"
             className="w-full rounded-xl border border-border"
           />
+        </div>
+
+        <div>
+          <h3 className="text-xl font-bold mb-3">Uploading Annual Reports</h3>
+          <p className="text-muted-foreground mb-4">
+            Admins can upload a PDF annual report that visitors can download from the landing page.
+          </p>
+          <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
+            <li>Click <strong>&quot;Manage Content&quot;</strong> in the dashboard</li>
+            <li>Select the <strong>Annual Report</strong> tab under Reports</li>
+            <li>Upload a PDF file (max 10MB)</li>
+            <li>The &quot;Download Annual Reports&quot; section will appear on the landing page</li>
+          </ol>
+        </div>
+
+        <div>
+          <h3 className="text-xl font-bold mb-3">Customizing the Footer</h3>
+          <p className="text-muted-foreground mb-4">
+            The footer description, copyright text, and navigation links can be managed from the dashboard.
+          </p>
+          <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
+            <li>Click <strong>&quot;Manage Content&quot;</strong> in the dashboard</li>
+            <li>Select the <strong>Footer</strong> tab under Reports</li>
+            <li>Edit the description, copyright text, and add/remove navigation links</li>
+            <li>Click <strong>Save</strong></li>
+          </ol>
         </div>
       </div>
     ),
@@ -498,10 +525,10 @@ const sections: Section[] = [
         <div>
           <h3 className="text-xl font-bold mb-3">Activity Logs &amp; Audit Trail</h3>
           <p className="text-muted-foreground mb-4">
-            All actions in the system are logged for accountability. You can view:
+            All actions in the system are logged for accountability. ADMIN, SECRETARY, and CHAIRMAN can view:
           </p>
           <ul className="list-disc list-inside space-y-2 text-muted-foreground mb-4">
-            <li><strong>Activity Logs</strong> — All system actions with timestamps</li>
+            <li><strong>Activity Logs</strong> — All system actions with timestamps (not visible to STAFF)</li>
             <li><strong>Approval Logs</strong> — Detailed approval/rejection history</li>
             <li><strong>Audit Trail</strong> — Complete change history for each staff record</li>
           </ul>
