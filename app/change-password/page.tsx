@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useAuthStore } from "@/lib/store"
+import { apiFetch } from "@/lib/api"
 import { toast } from "sonner"
 import { Lock, Eye, EyeOff } from "lucide-react"
 
@@ -33,26 +34,15 @@ export default function ChangePasswordPage() {
 
     setLoading(true)
     try {
-      const token = localStorage.getItem("token")
-      const res = await fetch("/api/auth/change-password", {
+      await apiFetch("/api/auth/change-password", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({ newPassword }),
       })
-
-      if (res.ok) {
-        toast.success("Password changed successfully")
-        setMustChangePassword(false)
-        router.push("/dashboard")
-      } else {
-        const data = await res.json()
-        toast.error(data.error || "Couldn't change password. Please try again.")
-      }
-    } catch {
-      toast.error("Couldn't change password. Please try again.")
+      toast.success("Password changed successfully")
+      setMustChangePassword(false)
+      router.push("/dashboard")
+    } catch (err: any) {
+      toast.error(err?.message || "Couldn't change password. Please try again.")
     } finally {
       setLoading(false)
     }
