@@ -8,9 +8,10 @@ import { useContent } from "@/hooks/use-resources"
 export default function AnnualReportSection() {
     const { data: contentData } = useContent()
     const sectionData = contentData?.find((item: any) => item.section === 'annual-report')
+    const meta = sectionData?.metadata || {}
     const content = sectionData
-        ? { title: sectionData.title, subtitle: sectionData.subtitle || "Transparency & Accountability", content: sectionData.content }
-        : { title: "2024 Annual Report", subtitle: "Transparency & Accountability", content: "The Local Government Service Commission publishes comprehensive annual reports detailing activities, achievements, and statistical data including Confirmations, Promotions, Conversions, Advancements, In-Service Training, Inter-Cadre Transfers, Exit from Service, and Disciplinary Cases." }
+        ? { title: sectionData.title, subtitle: sectionData.subtitle || "Transparency & Accountability", content: sectionData.content, reportFileUrl: meta.reportFileUrl }
+        : { title: "2024 Annual Report", subtitle: "Transparency & Accountability", content: "The Local Government Service Commission publishes comprehensive annual reports detailing activities, achievements, and statistical data including Confirmations, Promotions, Conversions, Advancements, In-Service Training, Inter-Cadre Transfers, Exit from Service, and Disciplinary Cases.", reportFileUrl: null }
 
     // Report categories from the 2024 Annual Report
     const reportCategories = [
@@ -26,7 +27,7 @@ export default function AnnualReportSection() {
             title: "EDO STATE ANNUAL REPORT",
             description: "Complete report with statistics, charts, and analysis",
             status: "Latest",
-            downloadUrl: "/reports/2024-annual-report.pdf"
+            downloadUrl: content.reportFileUrl || "/reports/2024-annual-report.pdf"
         }
     ]
 
@@ -78,6 +79,7 @@ export default function AnnualReportSection() {
                 </motion.div>
 
                 {/* Reports Download Section */}
+                {content.reportFileUrl && (
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
@@ -131,6 +133,7 @@ export default function AnnualReportSection() {
                         ))}
                     </div>
                 </motion.div>
+                )}
 
                 {/* Additional Info */}
                 <motion.div

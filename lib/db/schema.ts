@@ -224,6 +224,7 @@ export const contentSections = pgTable(
     title: text("title").notNull(),
     subtitle: text("subtitle"),
     content: text("content").notNull(),
+    metadata: json("metadata"),
     updatedAt: timestamp("updatedAt").notNull().defaultNow(),
   }
 );

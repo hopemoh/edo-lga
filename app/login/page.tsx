@@ -104,13 +104,6 @@ export default function LoginPage() {
             {loginMutation.isPending ? "Logging in..." : "Login"}
           </Button>
         </form>
-
-        <div className="mt-4 p-3 bg-muted rounded-md text-sm">
-          <p className="font-medium">Test Credentials:</p>
-          <p><span className="text-muted-foreground">Phone:</span> 08123456789</p>
-          <p><span className="text-muted-foreground">DOB:</span> 01/15/90 or 1990-01-15</p>
-          <p className="text-xs text-muted-foreground mt-2">Use your staff member's actual DOB for login</p>
-        </div>
       </Card>
     </div>
   )

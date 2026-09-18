@@ -4,20 +4,13 @@ import { logError } from "@/lib/error-logger";
 import { getTokenFromRequest, verifyToken } from "@/lib/auth";
 import { rateLimit } from "@/lib/rate-limit";
 
+const PUBLIC_PREFIXES = ["images/executives/", "images/highlights/", "images/lga/"];
+
 export async function GET(request: NextRequest) {
   try {
     const ip = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown";
     if (!rateLimit(`signed-url:${ip}`, 30, 60_000)) {
       return NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429 });
-    }
-
-    const token = getTokenFromRequest(request);
-    if (!token) {
-      return NextResponse.json({ error: "You need to log in to access this." }, { status: 401 });
-    }
-    const user = verifyToken(token);
-    if (!user) {
-      return NextResponse.json({ error: "You need to log in to access this." }, { status: 401 });
     }
 
     const url = request.nextUrl.searchParams.get("url");
@@ -39,6 +32,19 @@ export async function GET(request: NextRequest) {
 
     if (!key) {
       return NextResponse.json({ error: "Invalid S3 URL" }, { status: 400 });
+    }
+
+    const isPublic = PUBLIC_PREFIXES.some((prefix) => key!.startsWith(prefix));
+
+    if (!isPublic) {
+      const token = getTokenFromRequest(request);
+      if (!token) {
+        return NextResponse.json({ error: "You need to log in to access this." }, { status: 401 });
+      }
+      const user = verifyToken(token);
+      if (!user) {
+        return NextResponse.json({ error: "You need to log in to access this." }, { status: 401 });
+      }
     }
 
     const signedUrl = await getPresignedUrl(key, download || undefined);

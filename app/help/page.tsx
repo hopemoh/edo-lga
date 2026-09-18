@@ -48,7 +48,7 @@ const sections: Section[] = [
           <h3 className="text-xl font-bold mb-3">How to Access</h3>
           <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
             <li>Open your web browser and navigate to the application URL</li>
-            <li>Click <strong>&quot;Staff Dashboard&quot;</strong> in the top navigation bar</li>
+            <li>Click <strong>&quot;Login&quot;</strong> in the top navigation bar</li>
             <li>Enter your <strong>phone number</strong> (this is your username)</li>
             <li>Enter your <strong>date of birth</strong> in YYYY-MM-DD format (this is your password)</li>
             <li>Click <strong>Login</strong></li>
@@ -98,14 +98,16 @@ const sections: Section[] = [
             <tbody className="divide-y divide-border">
               {[
                 ["View own profile", true, true, true, true],
-                ["Submit change requests", true, true, true, true],
+                ["Submit change requests", false, true, true, true],
                 ["View all staff records", false, true, true, true],
                 ["Add/Edit staff members", false, true, true, true],
                 ["Bulk import staff (Excel/PDF)", false, true, true, true],
                 ["Upload staff documents", false, true, true, true],
+                ["View Activity Logs", false, true, true, true],
                 ["Manage LGA details", false, true, true, true],
                 ["Manage landing page content", false, true, true, true],
                 ["Manage executives & highlights", false, true, true, true],
+                ["Reset staff passwords", false, true, false, false],
                 ["1st-level approval of requests", false, true, true, true],
                 ["2nd-level approval of requests", false, false, true, true],
                 ["Final approval of requests", false, false, false, true],
@@ -147,8 +149,9 @@ const sections: Section[] = [
         <div>
           <h3 className="text-xl font-bold mb-3">Viewing Staff Records</h3>
           <p className="text-muted-foreground mb-4">
-            The staff table displays all records with columns for Serial Number, Name, Sex, Status, Rank,
-            Qualifications, SGL, Appointment Dates, LGA, and more. Use the search bar to filter by name.
+            The staff table displays records with columns for Name, Sex, Status, Rank,
+            Qualifications, SGL, and Actions. Use the search bar to filter by name.
+            Staff members can only see their own profile.
           </p>
         </div>
 
@@ -289,7 +292,7 @@ const sections: Section[] = [
           <div className="bg-muted/50 border border-border rounded-xl p-6 space-y-3">
             <div className="flex items-center gap-3">
               <span className="w-8 h-8 rounded-full bg-yellow-100 text-yellow-700 flex items-center justify-center text-sm font-bold">1</span>
-              <span className="text-sm"><strong>Staff</strong> submits a change request → Status: <code>PENDING</code></span>
+              <span className="text-sm"><strong>Admin</strong> creates a change request → Status: <code>PENDING</code></span>
             </div>
             <div className="flex items-center gap-3">
               <span className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-bold">2</span>
@@ -308,9 +311,13 @@ const sections: Section[] = [
 
         <div>
           <h3 className="text-xl font-bold mb-3">Submitting a Change Request</h3>
+          <p className="text-muted-foreground mb-4">
+            Only ADMIN, SECRETARY, and CHAIRMAN roles can create change requests. Open a staff member&apos;s
+            profile and click <strong>&quot;Process Change Request&quot;</strong> to begin.
+          </p>
           <ol className="list-decimal list-inside space-y-2 text-muted-foreground mb-4">
             <li>Open the staff member&apos;s profile</li>
-            <li>Click <strong>&quot;Request Change&quot;</strong></li>
+            <li>Click <strong>&quot;Process Change Request&quot;</strong></li>
             <li>Select the fields to change (name, DOB, phone, rank, status, etc.)</li>
             <li>Choose a reason from the dropdown (some reasons require a supporting document)</li>
             <li>Enter the corrected values</li>
@@ -463,6 +470,20 @@ const sections: Section[] = [
         </div>
 
         <div>
+          <h3 className="text-xl font-bold mb-3">Resetting Staff Passwords</h3>
+          <p className="text-muted-foreground mb-4">
+            If a staff member forgets their password, admins can reset it. This clears their password
+            and forces them to set a new one on their next login (using phone + DOB).
+          </p>
+          <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
+            <li>Open the staff member&apos;s profile</li>
+            <li>Click <strong>&quot;Reset Password&quot;</strong></li>
+            <li>Confirm the reset in the dialog</li>
+            <li>The staff member will use phone + DOB to login and must set a new password</li>
+          </ol>
+        </div>
+
+        <div>
           <h3 className="text-xl font-bold mb-3">System Settings (Chairman Only)</h3>
           <p className="text-muted-foreground mb-4">
             The Chairman can configure system-wide settings such as the document replacement time window.
@@ -497,7 +518,7 @@ const sections: Section[] = [
         {[
           {
             q: "I can't log in — it says 'Invalid credentials'",
-            a: "Your phone number is your username and your date of birth (YYYY-MM-DD format) is your password. Contact your admin if you need your credentials reset.",
+            a: "Enter your full phone number (with leading 0, e.g. 08123456789) and your date of birth (YYYY-MM-DD format). Contact your admin if you need your credentials reset.",
           },
           {
             q: "My document won't upload",
@@ -525,7 +546,7 @@ const sections: Section[] = [
           },
           {
             q: "How do I change my password?",
-            a: "Your password is your date of birth. To change it, contact your admin to update your date of birth in the system, or submit a change request for 'Change of date of birth'.",
+            a: "When you first log in (or after an admin resets your password), you'll be prompted to set a new password. Your initial password is your date of birth. Only admins can reset passwords — contact your admin if you need a reset.",
           },
         ].map((item, i) => (
           <details key={i} className="group border border-border rounded-xl overflow-hidden">
@@ -567,9 +588,9 @@ export default function HelpPage() {
               <div className="h-6 w-px bg-border" />
               <h1 className="text-lg font-bold">Help &amp; Documentation</h1>
             </div>
-            <Link href="/dashboard">
+            <Link href="/login">
               <button className="px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors">
-                Staff Dashboard
+                Login
               </button>
             </Link>
           </div>
@@ -579,7 +600,7 @@ export default function HelpPage() {
       <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-8">
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Sidebar */}
-          <aside className="lg:w-64 shrink-0">
+          <aside className="lg:w-72 shrink-0">
             <div className="lg:sticky lg:top-24 space-y-4">
               {/* Search */}
               <div className="relative">
@@ -599,7 +620,7 @@ export default function HelpPage() {
                   <button
                     key={section.id}
                     onClick={() => setActiveSection(section.id)}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                    className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
                       activeSection === section.id
                         ? "bg-primary/10 text-primary"
                         : "text-muted-foreground hover:text-foreground hover:bg-muted"

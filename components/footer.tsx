@@ -1,9 +1,22 @@
 "use client"
 
 import { motion } from "framer-motion"
+import { useContent } from "@/hooks/use-resources"
 
 export default function Footer() {
-  const currentYear = new Date().getFullYear()
+  const { data: contentData } = useContent()
+  const footerData = contentData?.find((item: any) => item.section === 'footer')
+  const metadata = footerData?.metadata || {}
+
+  const description = metadata.footerDescription || "Edo State Local Government Service Commission — Dedicated to transparent, efficient, and accountable public service across all 18 LGAs."
+  const copyright = metadata.footerCopyright || `© ${new Date().getFullYear()} Edo State Local Government Service Commission. All rights reserved.`
+  const links = metadata.footerLinks && metadata.footerLinks.length > 0
+    ? metadata.footerLinks
+    : [
+        { label: 'Home', href: '/' },
+        { label: 'Help', href: '/help' },
+        { label: 'Login', href: '/login' },
+      ]
 
   return (
     <footer className="bg-foreground text-background py-12 px-4 md:px-8 lg:px-12">
@@ -17,12 +30,12 @@ export default function Footer() {
           >
             <h3 className="text-2xl font-bold mb-2">Edo State</h3>
             <p className="text-background/70 text-sm">
-              Discover the heartbeat of Nigeria and explore our vibrant communities.
+              {description}
             </p>
           </motion.div>
 
           {/* Quick Links */}
-         {/* <motion.div
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
@@ -30,28 +43,15 @@ export default function Footer() {
           >
             <h4 className="font-semibold mb-4">Quick Links</h4>
             <ul className="space-y-2 text-sm text-background/70">
-              <li>
-                <a href="#" className="hover:text-background transition-colors">
-                  Home
-                </a>
-              </li>
-              <li>
-                <a href="#" className="hover:text-background transition-colors">
-                  Map
-                </a>
-              </li>
-              <li>
-                <a href="#" className="hover:text-background transition-colors">
-                  About
-                </a>
-              </li>
-              <li>
-                <a href="#" className="hover:text-background transition-colors">
-                  Contact
-                </a>
-              </li>
+              {links.map((link: { label: string; href: string }, i: number) => (
+                <li key={i}>
+                  <a href={link.href} className="hover:text-background transition-colors">
+                    {link.label}
+                  </a>
+                </li>
+              ))}
             </ul>
-          </motion.div>*/}
+          </motion.div>
 
           {/* Contact Info */}
           <motion.div
@@ -71,34 +71,11 @@ export default function Footer() {
               </li>
             </ul>
           </motion.div>
-
-          {/* Social Links */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-            viewport={{ once: true }}
-          >
-            <h4 className="font-semibold mb-4">Follow Us</h4>
-            <div className="flex gap-4">
-              {["Twitter", "Facebook", "Instagram"].map((social) => (
-                <motion.a
-                  key={social}
-                  href="#"
-                  whileHover={{ scale: 1.1 }}
-                  className="w-10 h-10 rounded-full border border-background/30 flex items-center justify-center hover:border-background hover:bg-background/10 transition-all"
-                >
-                  <span className="sr-only">{social}</span>
-                  {social.charAt(0)}
-                </motion.a>
-              ))}
-            </div>
-          </motion.div>
         </div>
 
         {/* Divider */}
         <div className="border-t border-background/20 pt-8 text-center text-sm text-background/60">
-          <p>&copy; {currentYear} Edo State. All rights reserved. Proudly showcasing Nigerian Heritage.</p>
+          <p>{copyright}</p>
         </div>
       </div>
     </footer>
