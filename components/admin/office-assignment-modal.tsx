@@ -121,7 +121,6 @@ export default function OfficeAssignmentModal({ open, onClose, staff, onSuccess 
             <div className="bg-primary/5 border border-primary/10 rounded-lg p-4">
               <p className="text-sm text-muted-foreground mb-1">Assigning office to:</p>
               <p className="font-bold text-lg">{staff.name}</p>
-              <p className="text-sm text-primary font-medium">{staff.serialNumber}</p>
             </div>
           )}
 
@@ -130,7 +129,7 @@ export default function OfficeAssignmentModal({ open, onClose, staff, onSuccess 
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm">
                 <p className="font-semibold text-amber-800">Current Holder</p>
                 <p className="text-amber-700">
-                  {currentHolder.name} ({currentHolder.serialNumber})
+                  {currentHolder.name}
                 </p>
                 <p className="text-xs text-amber-600 mt-1">
                   This will be replaced with the new assignment.
@@ -157,7 +156,7 @@ export default function OfficeAssignmentModal({ open, onClose, staff, onSuccess 
                     <SelectContent>
                       {staffList.map((s) => (
                         <SelectItem key={s.id} value={s.id}>
-                          {s.name} ({s.serialNumber})
+                          {s.name}
                         </SelectItem>
                       ))}
                     </SelectContent>

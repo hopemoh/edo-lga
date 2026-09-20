@@ -202,6 +202,22 @@ export async function POST(request: NextRequest) {
         .where(eq(staff.id, finalStaffId));
     }
 
+    // Get names for audit log
+    let newStaffName = "";
+    let oldStaffName = "";
+    if (finalStaffId) {
+      const newStaff = await db.query.staff.findFirst({ where: eq(staff.id, finalStaffId) });
+      newStaffName = newStaff?.name || "";
+    }
+    if (existingActive?.staffId) {
+      const oldStaff = await db.query.staff.findFirst({ where: eq(staff.id, existingActive.staffId) });
+      oldStaffName = oldStaff?.name || "";
+    }
+
+    const logDetails = existingActive
+      ? `${officeName}: From ${oldStaffName || "Unknown"} → To ${newStaffName || "Unknown"}`
+      : `${officeName} office created for ${newStaffName || "Unknown"}`;
+
     await createAuditLog(
       "CREATE",
       {
@@ -215,6 +231,8 @@ export async function POST(request: NextRequest) {
         officeName,
         staffId: finalStaffId,
         replacedOfficeId: existingActive?.id,
+        from: oldStaffName || undefined,
+        to: newStaffName,
       },
       undefined,
       finalStaffId || undefined
@@ -223,9 +241,7 @@ export async function POST(request: NextRequest) {
     await db.insert(logEntries).values({
       id: crypto.randomUUID(),
       action: "CREATE",
-      details: existingActive
-        ? `Replaced ${officeName} office holder with new assignment`
-        : `Created ${officeName} office`,
+      details: logDetails,
       userId: user.id,
       userFullName: user.name,
       userRank: "ADMIN",

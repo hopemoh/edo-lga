@@ -67,6 +67,13 @@ export async function DELETE(
         .where(eq(staff.id, office.staffId));
     }
 
+    // Get staff name for audit log
+    let staffName = "";
+    if (office.staffId) {
+      const staffMember = await db.query.staff.findFirst({ where: eq(staff.id, office.staffId) });
+      staffName = staffMember?.name || "";
+    }
+
     await createAuditLog(
       "DELETE",
       {
@@ -79,6 +86,7 @@ export async function DELETE(
         officeId: id,
         officeName: office.name,
         staffId: office.staffId,
+        revokedFrom: staffName || undefined,
       },
       undefined,
       office.staffId || undefined
@@ -87,7 +95,7 @@ export async function DELETE(
     await db.insert(logEntries).values({
       id: crypto.randomUUID(),
       action: "DELETE",
-      details: `Revoked ${office.name} office assignment`,
+      details: `Revoked ${office.name} office from ${staffName || "Unknown"}`,
       userId: user.id,
       userFullName: user.name,
       userRank: "ADMIN",
