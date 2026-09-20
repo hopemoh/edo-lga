@@ -10,6 +10,8 @@ export default function AppointmentsSection() {
     const { data: contentData } = useContent()
     const { data: highlights } = useHighlights("CONFIRMATION")
 
+    if (!highlights || highlights.length === 0) return null
+
     const sectionData = contentData?.find((item: any) => item.section === 'appointments')
     const content = sectionData
         ? { title: sectionData.title, subtitle: sectionData.subtitle || "Staff Confirmation", content: sectionData.content }

@@ -67,7 +67,7 @@ export default function LoginPage() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="dateOfBirth">Date of Birth (Password)</Label>
+            <Label htmlFor="dateOfBirth">Password (Date of Birth or Changed Password)</Label>
             <div className="relative">
               <Input
                 id="dateOfBirth"

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getTokenFromRequest, verifyToken } from "@/lib/auth";
+import { getTokenFromRequest, verifyToken, isAdminOrOfficeHolder } from "@/lib/auth";
 import { uploadToS3, generateS3Key, S3_FOLDERS } from "@/lib/s3";
 import { logError } from "@/lib/error-logger";
 
@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     }
 
     const user = verifyToken(token);
-    if (!user || !["ADMIN", "SECRETARY", "CHAIRMAN"].includes(user.role)) {
+    if (!isAdminOrOfficeHolder(user)) {
       return NextResponse.json({ error: "You don't have permission to do this." }, { status: 403 });
     }
 

@@ -9,7 +9,7 @@ import {
   logEntries,
   documentHistory,
 } from "@/lib/db/schema";
-import { getTokenFromRequest, verifyToken } from "@/lib/auth";
+import { getTokenFromRequest, verifyToken, isAdminOrOfficeHolder } from "@/lib/auth";
 import {
   uploadToS3,
   generateS3Key,
@@ -39,11 +39,13 @@ export async function GET(request: NextRequest) {
 
     let whereCondition;
     if (user.role === "STAFF") {
-      whereCondition = eq(staff.id, user.id);
+      whereCondition = and(eq(staff.id, user.id), eq(staff.isExternal, false));
     } else if (user.lgaId && !lgaIdParam) {
-      whereCondition = eq(staff.lgaId, user.lgaId);
+      whereCondition = and(eq(staff.lgaId, user.lgaId), eq(staff.isExternal, false));
     } else if (lgaIdParam) {
-      whereCondition = eq(staff.lgaId, lgaIdParam);
+      whereCondition = and(eq(staff.lgaId, lgaIdParam), eq(staff.isExternal, false));
+    } else {
+      whereCondition = eq(staff.isExternal, false);
     }
 
     const staffList = await db.query.staff.findMany({
@@ -108,7 +110,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "You need to log in to access this." }, { status: 401 });
     }
 
-    if (!["ADMIN", "SECRETARY", "CHAIRMAN"].includes(user.role)) {
+    if (!isAdminOrOfficeHolder(user)) {
       return NextResponse.json({ error: "You don't have permission to do this." }, { status: 403 });
     }
 
@@ -183,7 +185,7 @@ export async function POST(request: NextRequest) {
         name,
         sex,
         statusId,
-        role: staffRole as "STAFF" | "ADMIN" | "SECRETARY" | "CHAIRMAN",
+        role: staffRole as "STAFF" | "ADMIN",
         sgl,
         dateOfBirth: new Date(dateOfBirth),
         dateOfFirstAppt: new Date(dateOfFirstAppt),
@@ -232,7 +234,7 @@ export async function POST(request: NextRequest) {
       userId: user.id,
       userFullName: user.name,
       userRank: "",
-      userRole: (user.role ?? "STAFF") as "STAFF" | "ADMIN" | "SECRETARY" | "CHAIRMAN",
+      userRole: (user.role ?? "STAFF") as "STAFF" | "ADMIN",
     });
 
     return NextResponse.json(newStaff, { status: 201 });

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { sanctions } from "@/lib/db/schema";
-import { getTokenFromRequest, verifyToken } from "@/lib/auth";
+import { getTokenFromRequest, verifyToken, isAdminOrOfficeHolder } from "@/lib/auth";
 import { sanctionSchema } from "@/lib/validations";
 import { logError } from "@/lib/error-logger";
 
@@ -15,7 +15,7 @@ export async function PUT(
     if (!token) return NextResponse.json({ error: "You need to log in to access this." }, { status: 401 });
     const user = verifyToken(token);
     if (!user) return NextResponse.json({ error: "You need to log in to access this." }, { status: 401 });
-    if (!["ADMIN", "SECRETARY", "CHAIRMAN"].includes(user.role)) {
+    if (!isAdminOrOfficeHolder(user)) {
       return NextResponse.json({ error: "You don't have permission to do this." }, { status: 403 });
     }
 
@@ -85,7 +85,7 @@ export async function DELETE(
     if (!token) return NextResponse.json({ error: "You need to log in to access this." }, { status: 401 });
     const user = verifyToken(token);
     if (!user) return NextResponse.json({ error: "You need to log in to access this." }, { status: 401 });
-    if (!["ADMIN", "SECRETARY", "CHAIRMAN"].includes(user.role)) {
+    if (!isAdminOrOfficeHolder(user)) {
       return NextResponse.json({ error: "You don't have permission to do this." }, { status: 403 });
     }
 

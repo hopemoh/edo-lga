@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { sanctions } from "@/lib/db/schema";
 import { sanctionSchema } from "@/lib/validations";
 import { logError } from "@/lib/error-logger";
-import { getTokenFromRequest, verifyToken } from "@/lib/auth";
+import { getTokenFromRequest, verifyToken, isAdminOrOfficeHolder } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
   try {
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "You need to log in to access this." }, { status: 401 });
     }
     const user = verifyToken(token);
-    if (!user || !["ADMIN", "SECRETARY", "CHAIRMAN"].includes(user.role)) {
+    if (!isAdminOrOfficeHolder(user)) {
       return NextResponse.json({ error: "You don't have permission to do this." }, { status: 403 });
     }
 

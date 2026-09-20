@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { errorLogs } from "@/lib/db/schema";
 import { eq, desc, and, sql, count, inArray } from "drizzle-orm";
-import { getTokenFromRequest, verifyToken } from "@/lib/auth";
+import { getTokenFromRequest, verifyToken, isAdminOrOfficeHolder } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     }
 
     const user = verifyToken(token);
-    if (!user || !["ADMIN", "SECRETARY", "CHAIRMAN"].includes(user.role)) {
+    if (!user || !isAdminOrOfficeHolder(user)) {
       return NextResponse.json({ error: "You don't have permission to do this." }, { status: 403 });
     }
 
@@ -64,7 +64,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const user = verifyToken(token);
-    if (!user || !["ADMIN", "SECRETARY", "CHAIRMAN"].includes(user.role)) {
+    if (!user || !isAdminOrOfficeHolder(user)) {
       return NextResponse.json({ error: "You don't have permission to do this." }, { status: 403 });
     }
 

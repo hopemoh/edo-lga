@@ -21,8 +21,9 @@ import ContentFormModal from "../admin/content-form-modal"
 import HighlightsFormModal from "../admin/highlights-form-modal"
 import DisciplineFormModal from "../admin/discipline-form-modal"
 import SystemSettingsModal from "../admin/system-settings-modal"
+import CreateChairmanModal from "../admin/create-chairman-modal"
 import type { LogEntry, Staff, LGA } from "@/lib/types"
-import { LogOut, Upload, Plus, Settings, Edit, Users, MapPin, Activity, Bell, Star, ShieldAlert, CheckCircle } from "lucide-react"
+import { LogOut, Upload, Plus, Settings, Edit, Users, MapPin, Activity, Bell, Star, ShieldAlert, CheckCircle, Building2 } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { generateDummyStaff } from "@/lib/dummy-data"
 import { useStaff } from "@/hooks/use-staff"
@@ -46,6 +47,7 @@ export default function StaffDashboard() {
   const [showHighlightsForm, setShowHighlightsForm] = useState(false)
   const [showDisciplineForm, setShowDisciplineForm] = useState(false)
   const [showSystemSettings, setShowSystemSettings] = useState(false)
+  const [showCreateChairman, setShowCreateChairman] = useState(false)
   const [staffToEdit, setStaffToEdit] = useState<Staff | null>(null)
   const [isEditing, setIsEditing] = useState(false)
 
@@ -260,7 +262,7 @@ export default function StaffDashboard() {
                     <Star className="w-4 h-4 mr-2" />
                     Highlights & Execs
                   </Button>
-                  {currentUser?.role?.toUpperCase() === 'CHAIRMAN' && (
+                  {useAuthStore.getState().isOfficeHolder('CHAIRMAN') && (
                     <Button
                       variant="outline"
                       onClick={() => setShowSystemSettings(true)}
@@ -268,6 +270,16 @@ export default function StaffDashboard() {
                     >
                       <Settings className="w-4 h-4 mr-2" />
                       System Settings
+                    </Button>
+                  )}
+                  {currentUser?.role === 'ADMIN' && (
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowCreateChairman(true)}
+                      className="bg-violet-50 hover:bg-violet-100 text-violet-700 border-violet-200"
+                    >
+                      <Building2 className="w-4 h-4 mr-2" />
+                      Create Office
                     </Button>
                   )}
                 </div>
@@ -430,7 +442,7 @@ export default function StaffDashboard() {
         lgaId={selectedLGA?.id}
         isEditing={isEditing}
         staffToEdit={staffToEdit}
-        currentUserRole={currentUser?.role as "STAFF" | "ADMIN" | "SECRETARY" | "CHAIRMAN"}
+        currentUserRole={currentUser?.role as "STAFF" | "ADMIN"}
       />
 
       <LGAFormModal
@@ -462,6 +474,11 @@ export default function StaffDashboard() {
       <SystemSettingsModal
         open={showSystemSettings}
         onClose={() => setShowSystemSettings(false)}
+      />
+
+      <CreateChairmanModal
+        open={showCreateChairman}
+        onClose={() => setShowCreateChairman(false)}
       />
 
 

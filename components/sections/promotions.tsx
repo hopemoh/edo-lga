@@ -13,6 +13,8 @@ export default function PromotionsSection() {
     const [showAll, setShowAll] = useState(false)
     const router = useRouter()
 
+    if (!highlights || highlights.length === 0) return null
+
     const sectionData = contentData?.find((item: any) => item.section === 'promotions')
     const content = sectionData
         ? { title: sectionData.title, subtitle: sectionData.subtitle || "Career Advancement", content: sectionData.content }

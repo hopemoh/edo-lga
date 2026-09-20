@@ -50,7 +50,7 @@ const sections: Section[] = [
             <li>Open your web browser and navigate to the application URL</li>
             <li>Click <strong>&quot;Login&quot;</strong> in the top navigation bar</li>
             <li>Enter your <strong>phone number</strong> (this is your username)</li>
-            <li>Enter your <strong>date of birth</strong> in YYYY-MM-DD format (this is your password)</li>
+            <li>Enter your <strong>password</strong> (your date of birth for first login, or your changed password)</li>
             <li>Click <strong>Login</strong></li>
           </ol>
         </div>
@@ -58,7 +58,7 @@ const sections: Section[] = [
         <div className="bg-muted/50 border border-border rounded-xl p-4">
           <p className="text-sm font-medium mb-1">Login Format</p>
           <p className="text-sm text-muted-foreground">Phone: <code className="bg-muted px-1.5 py-0.5 rounded">08123456789</code> (leading 0 is optional — it gets stripped automatically)</p>
-          <p className="text-sm text-muted-foreground">DOB: <code className="bg-muted px-1.5 py-0.5 rounded">1980-03-03</code></p>
+          <p className="text-sm text-muted-foreground">Password: <code className="bg-muted px-1.5 py-0.5 rounded">1980-03-03</code> (DOB for first login, or your changed password)</p>
         </div>
 
         <div>
@@ -81,7 +81,7 @@ const sections: Section[] = [
     content: (
       <div className="space-y-6">
         <p className="text-muted-foreground">
-          The system has four user roles with different levels of access. Your role determines what you can see and do.
+          The system has four user roles: <strong>STAFF</strong>, <strong>ADMIN</strong>, <strong>CHAIRMAN</strong>, and <strong>SECRETARY</strong>. Your role determines what you can see and do.
         </p>
 
         <div className="overflow-x-auto">
@@ -98,8 +98,8 @@ const sections: Section[] = [
             <tbody className="divide-y divide-border">
               {[
                 ["View own profile", true, true, true, true],
-                ["Submit change requests", false, true, true, true],
                 ["View all staff records", false, true, true, true],
+                ["Submit change requests", false, true, true, true],
                 ["Add/Edit staff members", false, true, true, true],
                 ["Bulk import staff (Excel/PDF)", false, true, true, true],
                 ["Upload staff documents", false, true, true, true],
@@ -107,23 +107,34 @@ const sections: Section[] = [
                 ["Manage LGA details", false, true, true, true],
                 ["Manage landing page content", false, true, true, true],
                 ["Manage executives & highlights", false, true, true, true],
-                ["Reset staff passwords", false, true, false, false],
-                ["1st-level approval of requests", false, true, true, true],
-                ["2nd-level approval of requests", false, false, true, true],
-                ["Final approval of requests", false, false, false, true],
+                ["Reset staff passwords", false, true, true, true],
+                ["1st-level approval (Admin)", false, true, false, false],
+                ["2nd-level approval (Secretary)", false, false, true, false],
+                ["Final approval (Chairman)", false, false, false, true],
                 ["Delegate approval authority", false, false, false, true],
-                ["System settings", false, false, false, true],
-              ].map(([label, staff, admin, sec, chair], i) => (
+                ["Manage system settings", false, false, false, true],
+                ["Assign offices (Create Office)", false, true, false, false],
+                ["Assign Secretary role", false, false, false, true],
+              ].map(([label, staff, admin, secretary, chairman], i) => (
                 <tr key={i} className="hover:bg-muted/50">
                   <td className="p-3">{String(label)}</td>
                   <td className="text-center p-3">{staff ? <CheckCircle className="w-4 h-4 text-green-600 mx-auto" /> : <span className="text-muted-foreground">-</span>}</td>
                   <td className="text-center p-3">{admin ? <CheckCircle className="w-4 h-4 text-green-600 mx-auto" /> : <span className="text-muted-foreground">-</span>}</td>
-                  <td className="text-center p-3">{sec ? <CheckCircle className="w-4 h-4 text-green-600 mx-auto" /> : <span className="text-muted-foreground">-</span>}</td>
-                  <td className="text-center p-3">{chair ? <CheckCircle className="w-4 h-4 text-green-600 mx-auto" /> : <span className="text-muted-foreground">-</span>}</td>
+                  <td className="text-center p-3">{secretary ? <CheckCircle className="w-4 h-4 text-green-600 mx-auto" /> : <span className="text-muted-foreground">-</span>}</td>
+                  <td className="text-center p-3">{chairman ? <CheckCircle className="w-4 h-4 text-green-600 mx-auto" /> : <span className="text-muted-foreground">-</span>}</td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </div>
+
+        <div className="bg-muted/50 border border-border rounded-xl p-4 mt-4">
+          <p className="text-sm font-medium mb-1">How Roles Work</p>
+          <p className="text-sm text-muted-foreground">
+            ADMIN creates an office and assigns a CHAIRMAN or SECRETARY role to a staff member.
+            The CHAIRMAN can manage system settings, delegate approval authority, and give final approval on change requests.
+            The SECRETARY handles 2nd-level approvals. STAFF can only view their own profile and submit change requests.
+          </p>
         </div>
       </div>
     ),
@@ -222,8 +233,8 @@ const sections: Section[] = [
           <h3 className="text-xl font-bold mb-3">Viewing a Staff Profile</h3>
           <p className="text-muted-foreground mb-4">
             Click <strong>&quot;View Profile&quot;</strong> on any staff row to open their full profile. This shows
-            personal details, document, qualifications, and activity history. Admins can also submit change requests
-            and assign roles from here.
+            personal details, document, qualifications, and activity history. Admins, Chairmen, and Secretaries can also submit change requests
+            from here.
           </p>
           <SignedImage
             src={`${S3_BASE}/staff-detail-modal.png`}
@@ -313,7 +324,7 @@ const sections: Section[] = [
         <div>
           <h3 className="text-xl font-bold mb-3">Submitting a Change Request</h3>
           <p className="text-muted-foreground mb-4">
-            Only ADMIN, SECRETARY, and CHAIRMAN roles can create change requests. Open a staff member&apos;s
+            ADMIN, CHAIRMAN, and SECRETARY roles can create change requests. Open a staff member&apos;s
             profile and click <strong>&quot;Process Change Request&quot;</strong> to begin.
           </p>
           <ol className="list-decimal list-inside space-y-2 text-muted-foreground mb-4">
@@ -484,16 +495,15 @@ const sections: Section[] = [
         </div>
 
         <div>
-          <h3 className="text-xl font-bold mb-3">Role Assignment</h3>
+          <h3 className="text-xl font-bold mb-3">Assigning the Secretary Role</h3>
           <p className="text-muted-foreground mb-4">
-            Admins can assign roles (STAFF, ADMIN, SECRETARY, CHAIRMAN) to any staff member.
-            Only the Chairman can assign the CHAIRMAN role.
+            The CHAIRMAN can assign the SECRETARY role to any staff member. This grants them 2nd-level approval permissions.
           </p>
           <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
             <li>Open a staff member&apos;s profile</li>
-            <li>Click <strong>&quot;Assign Role&quot;</strong></li>
-            <li>Select the new role from the dropdown</li>
-            <li>Click <strong>Save</strong></li>
+            <li>Click <strong>&quot;Assign Secretary&quot;</strong></li>
+            <li>Confirm the assignment in the dialog</li>
+            <li>The staff member now has SECRETARY-level permissions</li>
           </ol>
         </div>
 
@@ -553,7 +563,7 @@ const sections: Section[] = [
         <div>
           <h3 className="text-xl font-bold mb-3">Activity Logs &amp; Audit Trail</h3>
           <p className="text-muted-foreground mb-4">
-            All actions in the system are logged for accountability. ADMIN, SECRETARY, and CHAIRMAN can view:
+            All actions in the system are logged for accountability. ADMIN, SECRETARY office, and CHAIRMAN office holders can view:
           </p>
           <ul className="list-disc list-inside space-y-2 text-muted-foreground mb-4">
             <li><strong>Activity Logs</strong> — All system actions with timestamps (not visible to STAFF)</li>
@@ -573,7 +583,7 @@ const sections: Section[] = [
         {[
           {
             q: "I can't log in — it says 'Invalid credentials'",
-            a: "Enter your full phone number (with leading 0, e.g. 08123456789) and your date of birth (YYYY-MM-DD format). Contact your admin if you need your credentials reset.",
+            a: "Enter your full phone number (with leading 0, e.g. 08123456789) and your password (date of birth for first login, or your changed password). Contact your admin if you need your credentials reset.",
           },
           {
             q: "My document won't upload",
@@ -585,7 +595,7 @@ const sections: Section[] = [
           },
           {
             q: "My change request is stuck in PENDING",
-            a: "Change requests need approval from Admin → Secretary → Chairman. Check with your Admin to see if the request has been reviewed. If it's been more than 24 hours, the Admin can no longer correct it — it must go through the full approval chain.",
+            a: "Change requests need approval from Admin → Secretary → Chairman. Check with your Admin, Secretary, or Chairman to see if the request has been reviewed. If it's been more than 24 hours, the Admin can no longer correct it — it must go through the full approval chain.",
           },
           {
             q: "I need to replace a document but the button is disabled",
@@ -601,7 +611,7 @@ const sections: Section[] = [
           },
           {
             q: "How do I change my password?",
-            a: "When you first log in (or after an admin resets your password), you'll be prompted to set a new password. Your initial password is your date of birth. Only admins can reset passwords — contact your admin if you need a reset.",
+            a: "When you first log in (or after an admin/chairman resets your password), you'll be prompted to set a new password. Your initial password is your date of birth. Admins and Chairmen can reset passwords — contact them if you need a reset.",
           },
         ].map((item, i) => (
           <details key={i} className="group border border-border rounded-xl overflow-hidden">

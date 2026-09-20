@@ -8,7 +8,7 @@ import {
   staffCertifications,
   auditLogs,
 } from "@/lib/db/schema";
-import { getTokenFromRequest, verifyToken } from "@/lib/auth";
+import { getTokenFromRequest, verifyToken, isAdminOrOfficeHolder } from "@/lib/auth";
 import { staffUpdateSchema } from "@/lib/validations";
 import { logError } from "@/lib/error-logger";
 
@@ -101,7 +101,7 @@ export async function PUT(
       return NextResponse.json({ error: "You need to log in to access this." }, { status: 401 });
     }
 
-    if (!["ADMIN", "SECRETARY", "CHAIRMAN"].includes(user.role)) {
+    if (!isAdminOrOfficeHolder(user)) {
       return NextResponse.json({ error: "You don't have permission to do this." }, { status: 403 });
     }
 
@@ -225,7 +225,7 @@ export async function PUT(
         details: `Updated fields: ${Object.keys(changes).join(", ")}`,
         performedBy: user.id,
         performedByFullName: user.name,
-        performedByRole: (user.role ?? "STAFF") as "STAFF" | "ADMIN" | "SECRETARY" | "CHAIRMAN",
+        performedByRole: (user.role ?? "STAFF") as "STAFF" | "ADMIN",
       });
     }
 

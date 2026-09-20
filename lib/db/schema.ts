@@ -14,7 +14,9 @@ import { relations } from "drizzle-orm";
 
 // ─── Enums ──────────────────────────────────────────────────────────────────
 
-export const roleEnum = pgEnum("Role", ["STAFF", "ADMIN", "SECRETARY", "CHAIRMAN"]);
+export const roleEnum = pgEnum("Role", ["STAFF", "ADMIN", "CHAIRMAN", "SECRETARY"]);
+
+export const officeNameEnum = pgEnum("OfficeName", ["CHAIRMAN", "SECRETARY"]);
 
 export const logActionEnum = pgEnum("LogAction", ["CREATE", "UPDATE", "DELETE", "DELEGATION_CREATED", "DELEGATION_REVOKED"]);
 
@@ -117,7 +119,6 @@ export const staff = pgTable(
   {
     id: text("id").primaryKey(),
     lgaId: text("lgaId")
-      .notNull()
       .references(() => lgas.id, { onDelete: "cascade" }),
     serialNumber: integer("serialNumber").notNull().unique(),
     name: text("name").notNull(),
@@ -139,6 +140,7 @@ export const staff = pgTable(
     yearsExperience: integer("yearsExperience"),
     passwordHash: text("passwordHash"),
     hasChangedPassword: boolean("hasChangedPassword").notNull().default(false),
+    isExternal: boolean("is_external").notNull().default(false),
     createdAt: timestamp("createdAt").notNull().defaultNow(),
     updatedAt: timestamp("updatedAt").notNull().defaultNow(),
   },
@@ -212,7 +214,7 @@ export const logEntries = pgTable(
     userId: text("userId").notNull(),
     userFullName: text("userFullName").notNull(),
     userRank: text("userRank").notNull(),
-    userRole: roleEnum("userRole").notNull(),
+    userRole: text("userRole").notNull(),
   }
 );
 
@@ -315,7 +317,7 @@ export const approvalLogs = pgTable(
     action: approvalActionEnum("action").notNull(),
     performedBy: text("performedBy").notNull(),
     performedByFullName: text("performedByFullName").notNull(),
-    performedByRole: roleEnum("performedByRole").notNull(),
+    performedByRole: text("performedByRole").notNull(),
     comments: text("comments"),
     timestamp: timestamp("timestamp").notNull().defaultNow(),
   },
@@ -334,7 +336,7 @@ export const auditLogs = pgTable(
     details: text("details").notNull(),
     performedBy: text("performedBy").notNull(),
     performedByFullName: text("performedByFullName").notNull(),
-    performedByRole: roleEnum("performedByRole").notNull(),
+    performedByRole: text("performedByRole").notNull(),
     timestamp: timestamp("timestamp").notNull().defaultNow(),
   },
   (table) => [
@@ -571,3 +573,21 @@ export const disciplinaryCasesRelations = relations(
     }),
   })
 );
+
+// ─── Offices Table ─────────────────────────────────────────────────────────
+
+export const offices = pgTable("offices", {
+  id: text("id").primaryKey(),
+  name: officeNameEnum("name").notNull(),
+  staffId: text("staff_id").references(() => staff.id),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  revokedAt: timestamp("revoked_at"),
+});
+
+export const officesRelations = relations(offices, ({ one }) => ({
+  staff: one(staff, {
+    fields: [offices.staffId],
+    references: [staff.id],
+  }),
+}));

@@ -9,6 +9,7 @@ import { CheckCircle, XCircle, Clock, AlertCircle, Eye } from "lucide-react"
 import { motion } from "framer-motion"
 import AuditLogViewer from "./audit-log-viewer"
 import { useChangeRequests, useApproveRequest, useRejectRequest, useCorrectRequest } from "@/hooks/use-change-requests"
+import { useAuthStore } from "@/lib/store"
 
 interface ChangeRequest {
   id: string
@@ -132,10 +133,8 @@ export default function ChangeRequests() {
 
   const canApprove = (request: ChangeRequest): boolean => {
     if (!currentUser) return false
-
     const role = currentUser.role?.toUpperCase()
     const status = request.status?.toUpperCase()
-
     return (
       (role === 'ADMIN' && status === 'PENDING') ||
       (role === 'SECRETARY' && status === 'ADMIN_APPROVED') ||
@@ -145,10 +144,8 @@ export default function ChangeRequests() {
 
   const canReject = (request: ChangeRequest): boolean => {
     if (!currentUser) return false
-
     const role = currentUser.role?.toUpperCase()
     const status = request.status?.toUpperCase()
-
     return (
       (role === 'SECRETARY' && status === 'ADMIN_APPROVED') ||
       (role === 'CHAIRMAN' && status === 'SECRETARY_APPROVED')

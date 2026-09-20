@@ -11,6 +11,8 @@ export default function ConversionSection() {
     const { data: highlights } = useHighlights("CONVERSION")
     const router = useRouter()
 
+    if (!highlights || highlights.length === 0) return null
+
     const sectionData = contentData?.find((item: any) => item.section === 'conversion')
     const content = sectionData
         ? { title: sectionData.title, subtitle: sectionData.subtitle || "Career Progression", content: sectionData.content }

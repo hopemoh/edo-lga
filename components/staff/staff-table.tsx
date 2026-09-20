@@ -20,6 +20,8 @@ export default function StaffTable({ staff, onUpdate, onEdit, isAdmin = false, c
   const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null)
   const { data: delegationData } = useDelegation()
 
+  const displayStaff = staff.filter((s: any) => !s.isExternal)
+
   const formatDate = (date: Date) => {
     if (!date) return 'N/A'
     const d = new Date(date)
@@ -47,7 +49,7 @@ export default function StaffTable({ staff, onUpdate, onEdit, isAdmin = false, c
               </tr>
             </thead>
             <tbody>
-              {staff.map((s, index) => (
+              {displayStaff.map((s, index) => (
                 <tr key={s.id} className="border-b border-border/30 hover:bg-secondary/5 transition-colors">
                     <td className="px-4 py-3 font-medium whitespace-nowrap">
                       <span className="flex items-center gap-1.5">

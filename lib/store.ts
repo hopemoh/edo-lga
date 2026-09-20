@@ -18,6 +18,7 @@ interface AuthState {
   setMustChangePassword: (value: boolean) => void
   logout: () => void
   isAdmin: () => boolean
+  isOfficeHolder: (name: "CHAIRMAN" | "SECRETARY") => boolean
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -43,7 +44,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
   isAdmin: () => {
     const { user } = get()
-    return user ? ["ADMIN", "SECRETARY", "CHAIRMAN"].includes(user.role.toUpperCase()) : false
+    if (!user) return false
+    return ["ADMIN", "CHAIRMAN", "SECRETARY"].includes(user.role.toUpperCase())
+  },
+  isOfficeHolder: (name) => {
+    const { user } = get()
+    return user?.role.toUpperCase() === name
   },
 }))
 

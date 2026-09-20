@@ -132,7 +132,14 @@ export const settingSchema = z.object({
 })
 
 export const roleAssignmentSchema = z.object({
-  role: z.enum(["STAFF", "ADMIN", "SECRETARY", "CHAIRMAN"], {
+  role: z.enum(["STAFF", "ADMIN", "CHAIRMAN", "SECRETARY"], {
     required_error: "Role is required",
   }),
+})
+
+export const officeAssignmentSchema = z.object({
+  officeName: z.enum(["CHAIRMAN", "SECRETARY"], {
+    required_error: "Office is required",
+  }),
+  staffId: z.string().optional(),
 })

@@ -5,6 +5,7 @@ import { landingPageHighlights } from "@/lib/db/schema";
 import {
   getTokenFromRequest,
   verifyToken,
+  isAdminOrOfficeHolder,
 } from "@/lib/auth";
 import {
   uploadToS3,
@@ -26,7 +27,7 @@ export async function PUT(
     }
 
     const user = verifyToken(token);
-    if (!["ADMIN", "SECRETARY", "CHAIRMAN"].includes(user!.role)) {
+    if (!isAdminOrOfficeHolder(user!)) {
       return NextResponse.json({ error: "You don't have permission to do this." }, { status: 403 });
     }
 
@@ -115,7 +116,7 @@ export async function DELETE(
     }
 
     const user = verifyToken(token);
-    if (!["ADMIN", "SECRETARY", "CHAIRMAN"].includes(user!.role)) {
+    if (!isAdminOrOfficeHolder(user!)) {
       return NextResponse.json({ error: "You don't have permission to do this." }, { status: 403 });
     }
 

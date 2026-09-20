@@ -50,3 +50,8 @@ export function getRefreshTokenFromRequest(request: NextRequest): string | null 
   const match = cookie.match(/refresh_token=([^;]+)/);
   return match ? match[1] : null;
 }
+
+export function isAdminOrOfficeHolder(user: { role: string } | null): boolean {
+  if (!user) return false
+  return ["ADMIN", "CHAIRMAN", "SECRETARY"].includes(user.role.toUpperCase())
+}
