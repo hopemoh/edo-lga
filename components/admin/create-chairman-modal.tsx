@@ -33,12 +33,12 @@ export default function CreateChairmanModal({ open, onClose, onSuccess }: Create
     phoneNumber: "",
     dateOfBirth: "",
     dateOfFirstAppt: "",
-    sex: "Other",
+    sex: "Male",
   })
 
   useEffect(() => {
     if (open) {
-      setForm({ name: "", phoneNumber: "", dateOfBirth: "", dateOfFirstAppt: "", sex: "Other" })
+      setForm({ name: "", phoneNumber: "", dateOfBirth: "", dateOfFirstAppt: "", sex: "Male" })
       setCurrentHolder(null)
     }
   }, [open])
@@ -251,7 +251,6 @@ export default function CreateChairmanModal({ open, onClose, onSuccess }: Create
                   <SelectContent>
                     <SelectItem value="Male">Male</SelectItem>
                     <SelectItem value="Female">Female</SelectItem>
-                    <SelectItem value="Other">Other</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
           lgaId: null,
           serialNumber: nextSerial,
           name,
-          sex: sex || "Other",
+          sex: sex || "Male",
           statusId: existingStatus.id,
           role: "CHAIRMAN",
           dateOfBirth: new Date(dateOfBirth),
