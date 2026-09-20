@@ -34,7 +34,9 @@ export interface Staff {
   yearsExperience?: number;
   lga?: { id: string; name: string };
   canUpdateDetails?: boolean;
-  role?: "STAFF" | "ADMIN" | "SECRETARY" | "CHAIRMAN";
+  role?: "STAFF" | "ADMIN" | "CHAIRMAN" | "SECRETARY";
+  isExternal?: boolean;
+  officeName?: "CHAIRMAN" | "SECRETARY" | null;
 }
 
 export interface LogEntry {
@@ -45,7 +47,7 @@ export interface LogEntry {
   userId: string;
   userFullName: string;
   userRank: string;
-  userRole: "STAFF" | "ADMIN" | "SECRETARY" | "CHAIRMAN";
+  userRole: string;
 }
 
 export interface PreviousPosition {

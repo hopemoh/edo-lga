@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { eq, count } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { qualifications, staffQualifications } from "@/lib/db/schema";
-import { getTokenFromRequest, verifyToken } from "@/lib/auth";
+import { getTokenFromRequest, verifyToken, isAdminOrOfficeHolder } from "@/lib/auth";
 import { logError } from "@/lib/error-logger";
 
 export async function DELETE(
@@ -16,7 +16,7 @@ export async function DELETE(
     }
 
     const user = verifyToken(token);
-    if (!["ADMIN", "SECRETARY", "CHAIRMAN"].includes(user!.role)) {
+    if (!isAdminOrOfficeHolder(user!)) {
       return NextResponse.json({ error: "You don't have permission to do this." }, { status: 403 });
     }
 

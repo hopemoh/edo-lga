@@ -8,6 +8,8 @@ import { useExecutives } from "@/hooks/use-resources"
 export default function ExecutivesSection() {
     const { data: executives } = useExecutives()
 
+    if (!executives || executives.length === 0) return null
+
     return (
         <section className="py-16 px-4 md:px-8 lg:px-12 bg-white">
             <div className="max-w-7xl mx-auto">

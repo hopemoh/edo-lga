@@ -55,7 +55,7 @@ export default function ErrorLogsPage() {
       }
       return
     }
-    if (!["ADMIN", "SECRETARY", "CHAIRMAN"].includes(user.role)) {
+    if (user.role !== "ADMIN") {
       return
     }
     fetchLogs()
@@ -173,13 +173,13 @@ export default function ErrorLogsPage() {
     )
   }
 
-  if (!["ADMIN", "SECRETARY", "CHAIRMAN"].includes(user.role)) {
+  if (user.role !== "ADMIN") {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Card className="p-8 text-center max-w-md">
           <AlertTriangle className="w-12 h-12 text-destructive mx-auto mb-4" />
           <h1 className="text-xl font-bold mb-2">Access Denied</h1>
-          <p className="text-muted-foreground mb-4">Only employees with ADMIN, SECRETARY, or CHAIRMAN user role can view error logs.</p>
+          <p className="text-muted-foreground mb-4">Only employees with ADMIN user role can view error logs.</p>
           <Button onClick={() => router.push("/dashboard")}>Back to Dashboard</Button>
         </Card>
       </div>

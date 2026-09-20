@@ -4,13 +4,13 @@ import { motion } from "framer-motion"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
-import { X, Mail, Briefcase, Award, Upload, FileEdit, FileText, ShieldCheck, Calendar, MapPin, Hash, User, KeyRound, UserCheck } from "lucide-react"
+import { X, Mail, Briefcase, Award, Upload, FileEdit, FileText, ShieldCheck, Calendar, MapPin, Hash, User, KeyRound, UserCheck, Building2 } from "lucide-react"
 import type { Staff } from "@/lib/types"
 import ChangeRequestModal from "../admin/change-request-modal"
 import DocumentHistoryModal from "./document-history-modal"
 import DataChangeHistoryModal from "./data-change-history-modal"
-import RoleAssignmentModal from "../admin/role-assignment-modal"
 import DelegationModal from "../admin/delegation-modal"
+import OfficeAssignmentModal from "../admin/office-assignment-modal"
 import { useChangeRequests } from "@/hooks/use-change-requests"
 import { useResetPassword } from "@/hooks/use-staff"
 import { useAuthStore } from "@/lib/store"
@@ -37,9 +37,9 @@ export default function StaffDetailModal({ staff, onClose, onUpdate, onEdit }: S
   const [showChangeRequest, setShowChangeRequest] = useState(false)
   const [showDocumentHistory, setShowDocumentHistory] = useState(false)
   const [showDataHistory, setShowDataHistory] = useState(false)
-  const [showRoleAssignment, setShowRoleAssignment] = useState(false)
   const [showResetPassword, setShowResetPassword] = useState(false)
   const [showDelegation, setShowDelegation] = useState(false)
+  const [showOfficeAssignment, setShowOfficeAssignment] = useState(false)
   const resetPasswordMutation = useResetPassword()
   const [initialSelectedFields, setInitialSelectedFields] = useState<string[]>([])
   const [canReplace, setCanReplace] = useState(false)
@@ -408,15 +408,15 @@ export default function StaffDetailModal({ staff, onClose, onUpdate, onEdit }: S
               <FileText className="w-3 h-3 mr-1" />
               Data History
             </Button>
-            {currentUser?.role === 'CHAIRMAN' && (
+            {currentUser?.role === 'ADMIN' && (
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setShowRoleAssignment(true)}
-                className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200 text-xs"
+                onClick={() => setShowOfficeAssignment(true)}
+                className="bg-violet-50 hover:bg-violet-100 text-violet-700 border-violet-200 text-xs"
               >
-                <ShieldCheck className="w-3 h-3 mr-1" />
-                Assign Role
+                <Building2 className="w-3 h-3 mr-1" />
+                Assign Office
               </Button>
             )}
             {isAdmin && (
@@ -461,16 +461,18 @@ export default function StaffDetailModal({ staff, onClose, onUpdate, onEdit }: S
                   <KeyRound className="w-3 h-3 mr-1" />
                   Reset Password
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowDelegation(true)}
-                  className="bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-200 text-xs"
-                >
-                  <UserCheck className="w-3 h-3 mr-1" />
-                  Delegate
-                </Button>
               </>
+            )}
+            {useAuthStore.getState().isOfficeHolder('CHAIRMAN') && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowDelegation(true)}
+                className="bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-200 text-xs"
+              >
+                <UserCheck className="w-3 h-3 mr-1" />
+                Delegate
+              </Button>
             )}
             <Button variant="outline" size="sm" onClick={onClose} className="text-xs">
               Close
@@ -500,15 +502,6 @@ export default function StaffDetailModal({ staff, onClose, onUpdate, onEdit }: S
         open={showDataHistory}
         onClose={() => setShowDataHistory(false)}
         staff={staff}
-      />
-
-      <RoleAssignmentModal
-        open={showRoleAssignment}
-        onClose={() => setShowRoleAssignment(false)}
-        staff={staff}
-        onSuccess={(updatedStaff) => {
-          if (onUpdate) onUpdate(updatedStaff)
-        }}
       />
 
       <Dialog open={showResetPassword} onOpenChange={setShowResetPassword}>
@@ -543,6 +536,15 @@ export default function StaffDetailModal({ staff, onClose, onUpdate, onEdit }: S
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <OfficeAssignmentModal
+        open={showOfficeAssignment}
+        onClose={() => setShowOfficeAssignment(false)}
+        staff={staff}
+        onSuccess={() => {
+          fetchRequestStatus()
+        }}
+      />
 
       <DelegationModal
         open={showDelegation}

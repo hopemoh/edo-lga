@@ -3,13 +3,15 @@
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import Link from "next/link"
+import Image from "next/image"
 import { Menu, X } from "lucide-react"
+import { useHighlights } from "@/hooks/use-resources"
 
 interface NavigationProps {
   onSectionClick?: (sectionId: string) => void
 }
 
-const navItems = [
+const baseNavItems = [
   { id: "hero", label: "Home" },
   { id: "mission-vision", label: "Mission & Vision" },
   { id: "map-section", label: "Explore LGAs" },
@@ -31,6 +33,19 @@ export default function Navigation({ onSectionClick }: NavigationProps) {
   const [activeSection, setActiveSection] = useState("hero")
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+
+  const { data: confirmHighlights } = useHighlights("CONFIRMATION")
+  const { data: promoHighlights } = useHighlights("PROMOTION")
+  const { data: postingHighlights } = useHighlights("POSTING")
+  const { data: conversionHighlights } = useHighlights("CONVERSION")
+
+  const navItems = baseNavItems.filter((item) => {
+    if (item.id === "appointments" && (!confirmHighlights || confirmHighlights.length === 0)) return false
+    if (item.id === "promotions" && (!promoHighlights || promoHighlights.length === 0)) return false
+    if (item.id === "posting" && (!postingHighlights || postingHighlights.length === 0)) return false
+    if (item.id === "conversion" && (!conversionHighlights || conversionHighlights.length === 0)) return false
+    return true
+  })
 
   useEffect(() => {
     const handleScroll = () => {
@@ -85,8 +100,15 @@ export default function Navigation({ onSectionClick }: NavigationProps) {
               animate={{ opacity: 1 }}
               className="flex items-center gap-3"
             >
-              <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-lg">E</span>
+              <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center overflow-hidden">
+                <Image
+                  src="/edsg%20logo.png"
+                  alt="Edo State Logo"
+                  width={40}
+                  height={40}
+                  className="object-contain"
+                  priority
+                />
               </div>
               <div className="hidden sm:block">
                 <h1 className="text-lg font-bold text-foreground">Edo State</h1>

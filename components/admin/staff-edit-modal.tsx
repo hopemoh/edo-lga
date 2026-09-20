@@ -20,7 +20,7 @@ import { staffUpdateSchema } from "@/lib/validations"
 import type { z } from "zod"
 
 type StaffEditFormValues = z.infer<typeof staffUpdateSchema>
-type Role = "STAFF" | "ADMIN" | "SECRETARY" | "CHAIRMAN"
+type Role = "STAFF" | "ADMIN" | "CHAIRMAN" | "SECRETARY"
 
 interface StaffEditModalProps {
   open: boolean

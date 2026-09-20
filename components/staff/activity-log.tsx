@@ -94,8 +94,8 @@ export default function ActivityLog({ logs }: ActivityLogProps) {
                     <p className="text-xs text-muted-foreground mt-2">By {log.userFullName}</p>
                   </div>
                   <div className="text-right shrink-0">
-                  {/*  <p className="text-xs text-muted-foreground">{log.timestamp.toLocaleDateString()}</p>
-                    <p className="text-xs text-muted-foreground">{log.timestamp.toLocaleTimeString()}</p>*/}
+                    <p className="text-xs text-muted-foreground">{new Date(log.timestamp).toLocaleDateString()}</p>
+                    <p className="text-xs text-muted-foreground">{new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                   </div>
                 </div>
               </div>

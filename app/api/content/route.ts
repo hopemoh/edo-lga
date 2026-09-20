@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     }
 
     const user = verifyToken(token);
-    if (!["ADMIN", "SECRETARY", "CHAIRMAN"].includes(user?.role ?? "ADMIN")) {
+    if (user?.role !== "ADMIN") {
       return NextResponse.json({ error: "You don't have permission to do this." }, { status: 403 });
     }
 

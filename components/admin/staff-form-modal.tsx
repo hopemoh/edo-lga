@@ -20,7 +20,7 @@ import { staffCreateSchema } from "@/lib/validations"
 import type { z } from "zod"
 
 type StaffFormValues = z.infer<typeof staffCreateSchema>
-type Role = "STAFF" | "ADMIN" | "SECRETARY" | "CHAIRMAN"
+type Role = "STAFF" | "ADMIN" | "CHAIRMAN" | "SECRETARY"
 
 interface StaffFormModalProps {
   open: boolean
@@ -73,7 +73,7 @@ export default function StaffFormModal({ open, onClose, onSuccess, lgaId: initia
     },
   })
 
-  const isAdmin = currentUserRole && ['ADMIN', 'SECRETARY', 'CHAIRMAN'].includes(currentUserRole)
+  const isAdmin = currentUserRole && ['ADMIN'].includes(currentUserRole)
 
   const editableFields = approvedChangeRequest?.selectedFields || []
 

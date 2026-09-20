@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { changeReasons } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { getTokenFromRequest, verifyToken } from "@/lib/auth";
+import { getTokenFromRequest, verifyToken, isAdminOrOfficeHolder } from "@/lib/auth";
 import { changeReasonSchema } from "@/lib/validations";
 import { logError } from "@/lib/error-logger";
 
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     }
 
     const user = verifyToken(token);
-    if (user!.role !== "ADMIN") {
+    if (!isAdminOrOfficeHolder(user!)) {
       return NextResponse.json({ error: "You don't have permission to do this." }, { status: 403 });
     }
 

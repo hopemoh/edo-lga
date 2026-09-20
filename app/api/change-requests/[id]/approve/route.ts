@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { changeRequests, staff } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
-import { getTokenFromRequest, verifyToken } from "@/lib/auth";
+import { changeRequests, staff, offices } from "@/lib/db/schema";
+import { eq, and } from "drizzle-orm";
+import { getTokenFromRequest, verifyToken, isAdminOrOfficeHolder } from "@/lib/auth";
 import {
   canApproveAtLevel,
   createAuditLog,
@@ -11,6 +11,7 @@ import {
   getCorrectionWindowExpiry,
   getDelegationInfo,
   isChairmanDelegate,
+  getActiveOfficeForStaff,
   type DelegationInfo,
 } from "@/lib/approval-utils";
 import { approveSchema, rejectSchema, correctSchema } from "@/lib/validations";
@@ -38,6 +39,8 @@ export async function POST(
     });
     const approverName = currentUser?.name || user.name;
 
+    const officeName = await getActiveOfficeForStaff(user.id);
+
     const body = await request.json().catch(() => ({}));
     const parsed = approveSchema.safeParse(body);
     if (!parsed.success) {
@@ -54,7 +57,7 @@ export async function POST(
 
     // Check for delegation
     const delegationInfo = await getDelegationInfo(user.id);
-    const validation = canApproveAtLevel(changeRequest.status, user.role, delegationInfo);
+    const validation = canApproveAtLevel(changeRequest.status, user.role, officeName, delegationInfo);
     if (!validation.valid) {
       return NextResponse.json({ error: validation.reason }, { status: 400 });
     }
@@ -79,15 +82,18 @@ export async function POST(
       updateData.adminApprovedByName = approverName;
       updateData.adminApprovedAt = new Date();
       updateData.adminApprovedComments = parsed.data.comments || null;
-    } else if (user.role === "SECRETARY") {
+    } else if (officeName === "SECRETARY") {
       updateData.secretaryApprovedBy = user.id;
       updateData.secretaryApprovedByName = approverName;
       updateData.secretaryApprovedAt = new Date();
       updateData.secretaryApprovedComments = parsed.data.comments || null;
-    } else if (user.role === "CHAIRMAN" || delegationInfo.isDelegate) {
-      // Delegate acts as chairman — log both in audit
-      const effectiveId = delegationInfo.isDelegate ? delegationInfo.delegatorId! : user.id;
-      const effectiveName = delegationInfo.isDelegate ? delegationInfo.delegatorName! : approverName;
+    } else if (officeName === "CHAIRMAN" || delegationInfo.isDelegate) {
+      const chairmanOffice = await db.query.offices.findFirst({
+        where: and(eq(offices.name, "CHAIRMAN"), eq(offices.isActive, true)),
+        with: { staff: true },
+      });
+      const effectiveId = delegationInfo.isDelegate ? delegationInfo.delegatorId! : chairmanOffice?.staffId ?? user.id;
+      const effectiveName = delegationInfo.isDelegate ? delegationInfo.delegatorName! : chairmanOffice?.staff?.name ?? approverName;
       updateData.chairmanApprovedBy = effectiveId;
       updateData.chairmanApprovedByName = effectiveName;
       updateData.chairmanApprovedAt = new Date();
@@ -176,6 +182,8 @@ export async function PUT(
     });
     const approverName = currentUser?.name || user.name;
 
+    const officeName = await getActiveOfficeForStaff(user.id);
+
     const body = await request.json();
     const parsed = rejectSchema.safeParse(body);
     if (!parsed.success) {
@@ -192,7 +200,7 @@ export async function PUT(
     }
 
     const delegationInfo = await getDelegationInfo(user.id);
-    const validation = canApproveAtLevel(changeRequest.status, user.role, delegationInfo);
+    const validation = canApproveAtLevel(changeRequest.status, user.role, officeName, delegationInfo);
     if (!validation.valid) {
       return NextResponse.json({ error: validation.reason }, { status: 400 });
     }
@@ -209,7 +217,7 @@ export async function PUT(
       rejectedBy: user.id,
       rejectedAt: new Date(),
       rejectedReason: reason.trim(),
-      rejectedByRole: user.role,
+      rejectedByRole: officeName || user.role,
       updatedAt: new Date(),
     }).where(eq(changeRequests.id, id));
 
@@ -267,7 +275,7 @@ export async function PATCH(
       return NextResponse.json({ error: "You need to log in to access this." }, { status: 401 });
     }
 
-    if (user.role !== "ADMIN") {
+    if (!isAdminOrOfficeHolder(user)) {
       return NextResponse.json({ error: "You don't have permission to do this." }, { status: 403 });
     }
 

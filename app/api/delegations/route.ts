@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { delegations, staff, logEntries } from "@/lib/db/schema";
+import { delegations, staff, logEntries, offices } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { getTokenFromRequest, verifyToken } from "@/lib/auth";
 import { logError } from "@/lib/error-logger";
-import { createAuditLog } from "@/lib/approval-utils";
+import { createAuditLog, isOfficeHolder, getActiveOffice } from "@/lib/approval-utils";
 
 export async function GET(request: NextRequest) {
   try {
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
     }
 
     const user = verifyToken(token);
-    if (!user || user.role !== "CHAIRMAN") {
+    if (!user || !(await isOfficeHolder("CHAIRMAN", user.id))) {
       return NextResponse.json({ error: "Only the Chairman can delegate." }, { status: 403 });
     }
 
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Staff member not found." }, { status: 404 });
     }
 
-    if (delegate.role === "CHAIRMAN") {
+    if (await isOfficeHolder("CHAIRMAN", delegateId)) {
       return NextResponse.json({ error: "Cannot delegate to another CHAIRMAN." }, { status: 400 });
     }
 
@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
     // Log to audit trail
     await createAuditLog(
       "DELEGATION_CREATED",
-      { userId: user.id, userFullName: user.name, userRole: "CHAIRMAN", rank: "CHAIRMAN" },
+      { userId: user.id, userFullName: user.name, userRole: user.role as "STAFF" | "ADMIN", rank: "CHAIRMAN" },
       {
         delegationId,
         delegateId,
@@ -169,7 +169,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     const user = verifyToken(token);
-    if (!user || user.role !== "CHAIRMAN") {
+    if (!user || !(await isOfficeHolder("CHAIRMAN", user.id))) {
       return NextResponse.json({ error: "Only the Chairman can revoke delegation." }, { status: 403 });
     }
 
@@ -196,7 +196,7 @@ export async function DELETE(request: NextRequest) {
 
     await createAuditLog(
       "DELEGATION_REVOKED",
-      { userId: user.id, userFullName: user.name, userRole: "CHAIRMAN", rank: "CHAIRMAN" },
+      { userId: user.id, userFullName: user.name, userRole: user.role as "STAFF" | "ADMIN", rank: "CHAIRMAN" },
       {
         delegationId: existing.id,
         delegateId: existing.delegateId,

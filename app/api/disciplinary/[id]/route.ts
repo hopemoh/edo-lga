@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { disciplinaryCases } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { getTokenFromRequest, verifyToken } from "@/lib/auth";
+import { getTokenFromRequest, verifyToken, isAdminOrOfficeHolder } from "@/lib/auth";
 import { disciplinaryCaseSchema } from "@/lib/validations";
 import { logError } from "@/lib/error-logger";
+import { isOfficeHolder } from "@/lib/approval-utils";
 
 export async function PUT(
   request: NextRequest,
@@ -18,7 +19,7 @@ export async function PUT(
     }
 
     const user = verifyToken(token);
-    if (!["ADMIN", "SECRETARY", "CHAIRMAN"].includes(user!.role)) {
+    if (!isAdminOrOfficeHolder(user!)) {
       return NextResponse.json({ error: "You don't have permission to do this." }, { status: 403 });
     }
 
@@ -78,7 +79,7 @@ export async function DELETE(
     }
 
     const user = verifyToken(token);
-    if (!["ADMIN", "CHAIRMAN"].includes(user!.role)) {
+    if (!isAdminOrOfficeHolder(user!) && !(await isOfficeHolder("CHAIRMAN", user!.id))) {
       return NextResponse.json({ error: "You don't have permission to do this." }, { status: 403 });
     }
 

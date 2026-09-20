@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { changeRequests, staff, changeReasons } from "@/lib/db/schema";
 import { eq, and, desc } from "drizzle-orm";
-import { getTokenFromRequest, verifyToken } from "@/lib/auth";
+import { getTokenFromRequest, verifyToken, isAdminOrOfficeHolder } from "@/lib/auth";
 import { changeRequestSchema } from "@/lib/validations";
 import { createAuditLog } from "@/lib/approval-utils";
 import { logError } from "@/lib/error-logger";
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
     }
 
     const user = verifyToken(token);
-    if (!user || user.role !== "ADMIN") {
+    if (!user || !isAdminOrOfficeHolder(user)) {
       return NextResponse.json({ error: "Only employees with ADMIN user role can create change requests." }, { status: 403 });
     }
 

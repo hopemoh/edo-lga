@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { changeRequests, approvalLogs, auditLogs, delegations, staff } from "./db/schema";
+import { changeRequests, approvalLogs, auditLogs, delegations, staff, offices } from "./db/schema";
 import { eq, and } from "drizzle-orm";
 
 const ADMIN_CORRECTION_WINDOW_HOURS = 24;
@@ -7,7 +7,7 @@ const ADMIN_CORRECTION_WINDOW_HOURS = 24;
 export interface ApprovalContext {
   userId: string;
   userFullName: string;
-  userRole: "STAFF" | "ADMIN" | "SECRETARY" | "CHAIRMAN";
+  userRole: "STAFF" | "ADMIN" | "CHAIRMAN" | "SECRETARY";
   rank: string;
 }
 
@@ -17,29 +17,83 @@ export interface DelegationInfo {
   delegatorName?: string;
 }
 
+export async function getActiveOffice(officeName: "CHAIRMAN" | "SECRETARY") {
+  return db.query.offices.findFirst({
+    where: and(
+      eq(offices.name, officeName),
+      eq(offices.isActive, true)
+    ),
+    with: {
+      staff: true,
+    },
+  });
+}
+
+export async function getActiveOfficeForStaff(staffId: string): Promise<"CHAIRMAN" | "SECRETARY" | null> {
+  const office = await db.query.offices.findFirst({
+    where: and(
+      eq(offices.staffId, staffId),
+      eq(offices.isActive, true)
+    ),
+  });
+  return office?.name ?? null;
+}
+
+export async function isOfficeHolder(officeName: "CHAIRMAN" | "SECRETARY", staffId: string): Promise<boolean> {
+  const office = await db.query.offices.findFirst({
+    where: and(
+      eq(offices.name, officeName),
+      eq(offices.staffId, staffId),
+      eq(offices.isActive, true)
+    ),
+  });
+  return !!office;
+}
+
+export async function hasElevatedAccess(userId: string): Promise<boolean> {
+  const user = await db.query.staff.findFirst({
+    where: eq(staff.id, userId),
+  });
+  if (!user) return false;
+  return ["ADMIN", "CHAIRMAN", "SECRETARY"].includes(user.role);
+}
+
+export async function getChairmanApprovalInfo(userId: string): Promise<{ officeId: string; name: string } | null> {
+  const office = await getActiveOffice("CHAIRMAN");
+  if (!office) return null;
+  return { officeId: office.id, name: office.staff?.name || "Chairman" };
+}
+
 export async function getDelegationInfo(userId: string): Promise<DelegationInfo> {
   const active = await db.query.delegations.findFirst({
     where: and(
       eq(delegations.delegateId, userId),
       eq(delegations.isActive, true)
     ),
-    with: {
-      // We'll do a separate query for the delegator name
-    },
   });
 
   if (!active) {
     return { isDelegate: false };
   }
 
+  // Look up delegator — could be a staff member or CHAIRMAN (external)
   const delegator = await db.query.staff.findFirst({
     where: eq(staff.id, active.delegatorId),
   });
 
+  // If delegator not found in staff, check if they're the CHAIRMAN office holder
+  let delegatorName = delegator?.name;
+  if (!delegatorName) {
+    const chairmanOffice = await getActiveOffice("CHAIRMAN");
+    if (chairmanOffice && chairmanOffice.staffId === active.delegatorId) {
+      delegatorName = chairmanOffice.staff?.name || "Chairman";
+    }
+  }
+
   return {
     isDelegate: true,
     delegatorId: active.delegatorId,
-    delegatorName: delegator?.name,
+    delegatorName,
   };
 }
 
@@ -95,6 +149,7 @@ export async function validateAdminCorrection(
 export function canApproveAtLevel(
   status: string,
   userRole: string,
+  officeName?: string | null,
   delegationInfo?: DelegationInfo
 ): { valid: boolean; reason?: string } {
   const validTransitions: Record<string, string[]> = {
@@ -109,15 +164,21 @@ export function canApproveAtLevel(
     return { valid: false, reason: `Invalid status: ${status}` };
   }
 
+  // Determine effective role: office holders get their office-level permissions
+  let effectiveRole = userRole;
+  if (officeName) {
+    effectiveRole = officeName;
+  }
+
   // Check if user is a CHAIRMAN delegate (inherits CHAIRMAN permissions)
-  const effectiveRole = (delegationInfo?.isDelegate && userRole !== "CHAIRMAN" && allowedRoles.includes("CHAIRMAN"))
-    ? "CHAIRMAN"
-    : userRole;
+  if (delegationInfo?.isDelegate && effectiveRole !== "CHAIRMAN" && allowedRoles.includes("CHAIRMAN")) {
+    effectiveRole = "CHAIRMAN";
+  }
 
   if (!allowedRoles.includes(effectiveRole)) {
     return {
       valid: false,
-      reason: `${userRole} cannot approve at this stage. Required: ${allowedRoles.join(", ")}`,
+      reason: `${userRole}${officeName ? ` (${officeName} office)` : ""} cannot approve at this stage. Required: ${allowedRoles.join(", ")}`,
     };
   }
 

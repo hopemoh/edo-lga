@@ -11,6 +11,8 @@ export default function PostingSection() {
     const { data: highlights } = useHighlights("POSTING")
     const router = useRouter()
 
+    if (!highlights || highlights.length === 0) return null
+
     const sectionData = contentData?.find((item: any) => item.section === 'posting')
     const content = sectionData
         ? { title: "Posting", subtitle: sectionData.subtitle || "Staff Movement & Posting", content: sectionData.content }
