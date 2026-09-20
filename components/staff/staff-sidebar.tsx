@@ -18,6 +18,7 @@ import type { LGA } from "@/lib/types"
 import { MapPin, Search, Home, Users, ChevronRight, Building2, LogOut } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import Link from "next/link"
+import Image from "next/image"
 
 interface StaffSidebarProps {
   selectedLGA: LGA | null
@@ -67,8 +68,14 @@ export default function StaffSidebar({ selectedLGA, onSelect, isAdmin = false }:
       {/* Header with branding */}
       <SidebarHeader className="border-b border-sidebar-border pb-0">
         <div className="flex items-center gap-3 px-2 py-4">
-          <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center">
-            <Building2 className="w-5 h-5" />
+          <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center overflow-hidden">
+            <Image
+              src="/edsg%20logo.png"
+              alt="Edo State Logo"
+              width={40}
+              height={40}
+              className="object-contain"
+            />
           </div>
           <div className="flex-1">
             <h2 className="font-bold text-base tracking-tight">
