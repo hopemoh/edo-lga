@@ -478,12 +478,12 @@ const sections: Section[] = [
     content: (
       <div className="space-y-8">
         <div>
-          <h3 className="text-xl font-bold mb-3">Managing Statuses, Ranks &amp; Qualifications</h3>
+          <h3 className="text-xl font-bold mb-3">Managing Departments, Ranks &amp; Qualifications</h3>
           <p className="text-muted-foreground mb-4">
             These are the building blocks of staff records. You can add, edit, or remove them from the dashboard.
           </p>
           <ol className="list-decimal list-inside space-y-2 text-muted-foreground mb-4">
-            <li>Click <strong>&quot;Manage Status, Ranks &amp; Qualifications&quot;</strong></li>
+            <li>Click <strong>&quot;Manage Departments, Ranks &amp; Qualifications&quot;</strong></li>
             <li>Switch between the Status, Rank, and Qualification tabs</li>
             <li>Add new items or edit existing ones</li>
           </ol>

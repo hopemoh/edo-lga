@@ -246,7 +246,7 @@ export default function StaffDashboard() {
                     onClick={() => setShowStatusForm(true)}
                   >
                     <Settings className="w-4 h-4 mr-2" />
-                    Manage Status, Ranks & Qualifications
+                    Manage Departments, Ranks & Qualifications
                   </Button>
                   <Button
                     variant="outline"
