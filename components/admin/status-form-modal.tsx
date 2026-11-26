@@ -25,7 +25,7 @@ export default function StatusFormModal({ open, onClose, onSuccess }: StatusForm
 
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch('/api/status', {
+      const response = await fetch('/api/departments', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -53,7 +53,7 @@ export default function StatusFormModal({ open, onClose, onSuccess }: StatusForm
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Add New Status</DialogTitle>
+          <DialogTitle>Add New Department</DialogTitle>
         </DialogHeader>
 
         <motion.form

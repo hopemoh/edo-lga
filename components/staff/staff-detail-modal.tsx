@@ -191,6 +191,12 @@ export default function StaffDetailModal({ staff, onClose, onUpdate, onEdit }: S
                     {typeof staff.lga === 'object' ? staff.lga?.name : staff.lgaId}
                   </span>
                 )}
+                {staff.commissionId && (
+                  <span className="text-sm text-muted-foreground flex items-center gap-1">
+                    <MapPin className="w-3 h-3" />
+                    {typeof staff.commission === 'object' ? staff.commission?.name : staff.commissionId}
+                  </span>
+                )}
               </div>
             </div>
 
@@ -205,8 +211,8 @@ export default function StaffDetailModal({ staff, onClose, onUpdate, onEdit }: S
                 <p className="font-medium text-sm">{staff.sex || 'N/A'}</p>
               </div>
               <div className="bg-muted/30 rounded-lg p-3">
-                <p className="text-xs text-muted-foreground flex items-center gap-1 mb-1"><Briefcase className="w-3 h-3" /> Status</p>
-                <p className="font-medium text-sm">{typeof staff.status === 'object' ? staff.status.name : staff.status || 'N/A'}</p>
+                <p className="text-xs text-muted-foreground flex items-center gap-1 mb-1"><Briefcase className="w-3 h-3" /> Department</p>
+                <p className="font-medium text-sm">{typeof staff.department === 'object' ? staff.department.name : staff.department || 'N/A'}</p>
               </div>
               <div className="bg-muted/30 rounded-lg p-3">
                 <p className="text-xs text-muted-foreground flex items-center gap-1 mb-1"><Award className="w-3 h-3" /> SGL</p>
@@ -252,24 +258,30 @@ export default function StaffDetailModal({ staff, onClose, onUpdate, onEdit }: S
                   <p className="font-medium">{staff.dateOfPresentAppt ? new Date(staff.dateOfPresentAppt).toLocaleDateString() : 'N/A'}</p>
                 </div>
               </div>
-              {(staff as any).recommendedRetirementDate && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-                  <div className="bg-muted/30 rounded-lg p-4">
-                    <p className="text-sm text-muted-foreground flex items-center gap-1"><Calendar className="w-3 h-3" /> Recommended Retirement</p>
-                    <p className="font-medium">{new Date((staff as any).recommendedRetirementDate).toLocaleDateString()}</p>
-                  </div>
-                  {(staff as any).yearsExperience != null && (
-                    <div className="bg-muted/30 rounded-lg p-4">
-                      <p className="text-sm text-muted-foreground">Years of Experience</p>
-                      <p className="font-medium">{(staff as any).yearsExperience} years</p>
-                    </div>
-                  )}
-                  <div className="bg-muted/30 rounded-lg p-4">
-                    <p className="text-sm text-muted-foreground">Role</p>
-                    <p className="font-medium">{staff.role || 'N/A'}</p>
-                  </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                <div className="bg-muted/30 rounded-lg p-4">
+                  <p className="text-sm text-muted-foreground flex items-center gap-1"><Calendar className="w-3 h-3" /> Retirement by Age (60)</p>
+                  <p className="font-medium">{staff.proposedRetirementAge ? new Date(`${staff.proposedRetirementAge}T00:00:00`).toLocaleDateString() : 'N/A'}</p>
                 </div>
-              )}
+                <div className="bg-muted/30 rounded-lg p-4">
+                  <p className="text-sm text-muted-foreground flex items-center gap-1"><Calendar className="w-3 h-3" /> Retirement by Appointment (35 years)</p>
+                  <p className="font-medium">{staff.proposedRetirementByAppt ? new Date(`${staff.proposedRetirementByAppt}T00:00:00`).toLocaleDateString() : 'N/A'}</p>
+                </div>
+                <div className="bg-muted/30 rounded-lg p-4">
+                  <p className="text-sm text-muted-foreground flex items-center gap-1"><Calendar className="w-3 h-3" /> Prospective Retirement Date</p>
+                  <p className="font-medium">{staff.proposedRetirementDate ? new Date(`${staff.proposedRetirementDate}T00:00:00`).toLocaleDateString() : 'N/A'}</p>
+                </div>
+                {(staff as any).yearsExperience != null && (
+                  <div className="bg-muted/30 rounded-lg p-4">
+                    <p className="text-sm text-muted-foreground">Years of Experience</p>
+                    <p className="font-medium">{(staff as any).yearsExperience} years</p>
+                  </div>
+                )}
+                <div className="bg-muted/30 rounded-lg p-4">
+                  <p className="text-sm text-muted-foreground">Role</p>
+                  <p className="font-medium">{staff.role || 'N/A'}</p>
+                </div>
+              </div>
             </div>
 
             {/* Certifications */}

@@ -12,7 +12,8 @@ import { AlertCircle, Lock } from "lucide-react"
 import { motion } from "framer-motion"
 import type { Staff } from "@/lib/types"
 import { useLGAs } from "@/hooks/use-lgas"
-import { useStatuses, useRanks, useQualifications } from "@/hooks/use-resources"
+import { useCommissions } from "@/hooks/use-commissions"
+import { useDepartments, useRanks, useQualifications } from "@/hooks/use-resources"
 import { useCreateStaff, useUpdateStaff } from "@/hooks/use-staff"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -27,6 +28,7 @@ interface StaffFormModalProps {
   onClose: () => void
   onSuccess: () => void
   lgaId?: string
+  commissionId?: string
   staffToEdit?: Staff | null
   isEditing?: boolean
   currentUserRole?: Role
@@ -42,16 +44,18 @@ interface ChangeRequest {
   status: string
 }
 
-export default function StaffFormModal({ open, onClose, onSuccess, lgaId: initialLgaId, staffToEdit, isEditing, currentUserRole }: StaffFormModalProps) {
+export default function StaffFormModal({ open, onClose, onSuccess, lgaId: initialLgaId, commissionId: initialCommissionId, staffToEdit, isEditing, currentUserRole }: StaffFormModalProps) {
   const [selectedQualifications, setSelectedQualifications] = useState<string[]>([])
   const [file, setFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [approvedChangeRequest, setApprovedChangeRequest] = useState<ChangeRequest | null>(null)
   const [hasApprovedRequest, setHasApprovedRequest] = useState(false)
+  const [assignmentType, setAssignmentType] = useState<"lga" | "commission">("lga")
 
   const { data: lgas = [] } = useLGAs()
-  const { data: statuses = [] } = useStatuses()
+  const { data: commissions = [] } = useCommissions()
+  const { data: departments = [] } = useDepartments()
   const { data: ranks = [] } = useRanks()
   const { data: qualifications = [] } = useQualifications()
   const createMutation = useCreateStaff()
@@ -62,8 +66,9 @@ export default function StaffFormModal({ open, onClose, onSuccess, lgaId: initia
     defaultValues: {
       name: "",
       sex: "M",
-      lgaId: initialLgaId || "",
-      statusId: "",
+      lgaId: initialCommissionId ? undefined : initialLgaId || "",
+      commissionId: initialCommissionId || "",
+      departmentId: "",
       phoneNumber: "",
       sgl: 1,
       dateOfBirth: "",
@@ -94,18 +99,20 @@ export default function StaffFormModal({ open, onClose, onSuccess, lgaId: initia
       }
 
       if (isEditing && staffToEdit) {
+        const commissionId = staffToEdit.commission?.id || staffToEdit.commissionId || ""
+        setAssignmentType(commissionId ? "commission" : "lga")
         const defaultVals = {
           name: staffToEdit.name || "",
           sex: (staffToEdit.sex || "M") as "M" | "F",
-          lgaId: staffToEdit.lga?.id || staffToEdit.lgaId || "",
-          statusId: typeof staffToEdit.status === 'object' ? (staffToEdit.status as any).id : "",
+          lgaId: commissionId ? "" : (staffToEdit.lga?.id || staffToEdit.lgaId || ""),
+          commissionId,
+          departmentId: typeof staffToEdit.department === 'object' ? (staffToEdit.department as any).id : "",
           phoneNumber: staffToEdit.phoneNumber || "",
           sgl: staffToEdit.sgl || 1,
           dateOfBirth: staffToEdit.dateOfBirth ? new Date(staffToEdit.dateOfBirth).toISOString().split('T')[0] : "",
           dateOfFirstAppt: staffToEdit.dateOfFirstAppt ? new Date(staffToEdit.dateOfFirstAppt).toISOString().split('T')[0] : "",
           dateOfConf: staffToEdit.dateOfConf ? new Date(staffToEdit.dateOfConf).toISOString().split('T')[0] : "",
           dateOfPresentAppt: staffToEdit.dateOfPresentAppt ? new Date(staffToEdit.dateOfPresentAppt).toISOString().split('T')[0] : "",
-          recommendedRetirementDate: staffToEdit.recommendedRetirementDate ? new Date(staffToEdit.recommendedRetirementDate).toISOString().split('T')[0] : "",
           remark: staffToEdit.remark || "",
         }
         reset(defaultVals)
@@ -113,18 +120,19 @@ export default function StaffFormModal({ open, onClose, onSuccess, lgaId: initia
           setSelectedQualifications((staffToEdit.qualifications as any[])?.map((q: any) => q.qualificationId || q.id) || [])
         }
       } else {
+        setAssignmentType(initialCommissionId ? "commission" : "lga")
         reset({
           name: "",
           sex: "M",
-          lgaId: initialLgaId || "",
-          statusId: "",
+          lgaId: initialCommissionId ? undefined : initialLgaId || "",
+          commissionId: initialCommissionId || "",
+          departmentId: "",
           phoneNumber: "",
           sgl: 1,
           dateOfBirth: "",
           dateOfFirstAppt: "",
           dateOfConf: "",
           dateOfPresentAppt: "",
-          recommendedRetirementDate: "",
           remark: "",
         })
         setSelectedQualifications([])
@@ -170,8 +178,10 @@ export default function StaffFormModal({ open, onClose, onSuccess, lgaId: initia
         if (approvedChangeRequest) {
           updateData = {}
           editableFields.forEach(field => {
-            if (field === 'status') {
-              updateData.statusId = data.statusId
+            if (field === 'department') {
+              updateData.departmentId = data.departmentId
+            } else if (field === 'commissionId' || field === 'lgaId') {
+              updateData[field] = (data as any)[field]
             } else if (field === 'rank') {
               updateData.rankId = (data as any).rankId
             } else {
@@ -200,7 +210,12 @@ export default function StaffFormModal({ open, onClose, onSuccess, lgaId: initia
           }
         )
       } else {
-        const staffData = { ...data, qualificationIds: selectedQualifications }
+        const staffData = {
+          ...data,
+          lgaId: data.lgaId || undefined,
+          commissionId: data.commissionId || undefined,
+          qualificationIds: selectedQualifications,
+        }
         const formDataWithFile = new FormData()
         formDataWithFile.append('data', JSON.stringify(staffData))
         if (file) {
@@ -373,18 +388,51 @@ export default function StaffFormModal({ open, onClose, onSuccess, lgaId: initia
             {/* Employment Details */}
             <div className="space-y-4">
               <h3 className="font-semibold text-lg">Employment Details</h3>
-              {renderField('statusId', 'Status', 'select',
-                statuses.map((s: any) => ({ value: s.id, label: s.name })), true
+              {renderField('departmentId', 'Department', 'select',
+                departments.map((d: any) => ({ value: d.id, label: d.name })), true
               )}
               {renderField('sgl', 'SGL', 'number', undefined, true)}
             </div>
           </div>
 
-          {/* LGA Selection */}
+          {/* Assignment: exactly one of LGA or commission */}
           <div className="space-y-4">
-            <h3 className="font-semibold text-lg">Location</h3>
-            {renderField('lgaId', 'LGA of Origin', 'select',
-              lgas.map((lga: any) => ({ value: lga.id, label: lga.name })), true
+            <h3 className="font-semibold text-lg">Assignment</h3>
+            <div className="space-y-2">
+              <Label htmlFor="assignmentType">Belongs to</Label>
+              <Select
+                value={assignmentType}
+                onValueChange={(value) => {
+                  const next = value as "lga" | "commission"
+                  setAssignmentType(next)
+                  if (next === "lga") {
+                    setValue("commissionId", undefined)
+                  } else {
+                    setValue("lgaId", undefined)
+                  }
+                }}
+                disabled={isFormDisabled}
+              >
+                <SelectTrigger id="assignmentType" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="lga">Local Government Area</SelectItem>
+                  <SelectItem value="commission">Commission</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                A staff member belongs to exactly one LGA or one commission.
+              </p>
+            </div>
+            {assignmentType === "lga" ? (
+              renderField('lgaId', 'LGA of Origin', 'select',
+                lgas.map((lga: any) => ({ value: lga.id, label: lga.name })), true
+              )
+            ) : (
+              renderField('commissionId', 'Commission', 'select',
+                commissions.map((commission: any) => ({ value: commission.id, label: commission.name })), true
+              )
             )}
           </div>
 
@@ -396,9 +444,9 @@ export default function StaffFormModal({ open, onClose, onSuccess, lgaId: initia
               {renderField('dateOfConf', 'Date of Confirmation', 'date')}
               {renderField('dateOfPresentAppt', 'Date of Present Appointment', 'date')}
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {renderField('recommendedRetirementDate', 'Recommended Retirement Date', 'date')}
-            </div>
+            <p className="text-sm text-muted-foreground">
+              Retirement dates are calculated automatically from the date of birth and the date of first appointment.
+            </p>
           </div>
 
           {/* Qualifications - only show if editing and qualifications field is editable */}

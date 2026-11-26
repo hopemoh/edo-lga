@@ -12,7 +12,7 @@ import { AlertCircle, Lock } from "lucide-react"
 import { motion } from "framer-motion"
 import type { Staff } from "@/lib/types"
 import { useLGAs } from "@/hooks/use-lgas"
-import { useStatuses, useRanks } from "@/hooks/use-resources"
+import { useDepartments, useRanks } from "@/hooks/use-resources"
 import { useUpdateStaff } from "@/hooks/use-staff"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -52,7 +52,7 @@ export default function StaffEditModal({
   const [error, setError] = useState("")
 
   const { data: lgas = [] } = useLGAs()
-  const { data: statuses = [] } = useStatuses()
+  const { data: departments = [] } = useDepartments()
   const { data: ranks = [] } = useRanks()
   const updateMutation = useUpdateStaff()
 
@@ -62,7 +62,8 @@ export default function StaffEditModal({
       name: "",
       sex: "M",
       lgaId: "",
-      statusId: "",
+      commissionId: "",
+      departmentId: "",
       phoneNumber: "",
       sgl: 1,
       dateOfBirth: "",
@@ -106,14 +107,14 @@ export default function StaffEditModal({
       name: staffToEdit.name || "",
       sex: (staffToEdit.sex || "M") as "M" | "F",
       lgaId: staffToEdit.lga?.id || staffToEdit.lgaId || "",
-      statusId: (staffToEdit.status as any)?.id || "",
+      commissionId: staffToEdit.commission?.id || staffToEdit.commissionId || "",
+      departmentId: (staffToEdit.department as any)?.id || "",
       phoneNumber: staffToEdit.phoneNumber || "",
       sgl: staffToEdit.sgl || 1,
       dateOfBirth: staffToEdit.dateOfBirth ? new Date(staffToEdit.dateOfBirth).toISOString().split('T')[0] : "",
       dateOfFirstAppt: staffToEdit.dateOfFirstAppt ? new Date(staffToEdit.dateOfFirstAppt).toISOString().split('T')[0] : "",
       dateOfConf: staffToEdit.dateOfConf ? new Date(staffToEdit.dateOfConf).toISOString().split('T')[0] : "",
       dateOfPresentAppt: staffToEdit.dateOfPresentAppt ? new Date(staffToEdit.dateOfPresentAppt).toISOString().split('T')[0] : "",
-      recommendedRetirementDate: staffToEdit.recommendedRetirementDate ? new Date(staffToEdit.recommendedRetirementDate).toISOString().split('T')[0] : "",
       remark: staffToEdit.remark || "",
     }
     reset(defaultVals)
@@ -128,8 +129,8 @@ export default function StaffEditModal({
       if (changeRequestId && changeRequest) {
         updateData = {} as any
         editableFields.forEach(field => {
-          if (field === 'status') {
-            (updateData as any).statusId = data.statusId
+          if (field === 'department') {
+            (updateData as any).departmentId = data.departmentId
           } else if (field === 'rank') {
             (updateData as any).rankId = (data as any).rankId
           } else {
@@ -287,8 +288,8 @@ export default function StaffEditModal({
             {/* Employment Details */}
             <div className="space-y-4">
               <h3 className="font-semibold text-lg">Employment Details</h3>
-              {renderField('statusId', 'Status', 'select',
-                statuses.map((s: any) => ({ value: s.id, label: s.name }))
+              {renderField('departmentId', 'Department', 'select',
+                departments.map((d: any) => ({ value: d.id, label: d.name }))
               )}
               {renderField('sgl', 'SGL')}
             </div>
@@ -302,9 +303,9 @@ export default function StaffEditModal({
               {renderField('dateOfConf', 'Date of Confirmation', 'date')}
               {renderField('dateOfPresentAppt', 'Date of Present Appointment', 'date')}
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {renderField('recommendedRetirementDate', 'Recommended Retirement Date', 'date')}
-            </div>
+            <p className="text-sm text-muted-foreground">
+              Retirement dates are calculated automatically from the date of birth and the date of first appointment.
+            </p>
           </div>
 
           {/* Additional Information */}

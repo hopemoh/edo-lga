@@ -3,7 +3,7 @@ import { apiFetch } from "@/lib/api"
 
 export function useLGAs() {
   return useQuery({
-    queryKey: ["lgas"],
+    queryKey: ["lgas", "LGA"],
     queryFn: () => apiFetch<any[]>("/api/lgas"),
   })
 }
@@ -13,6 +13,17 @@ export function useLGA(id: string) {
     queryKey: ["lgas", id],
     queryFn: () => apiFetch<any>(`/api/lgas/${id}`),
     enabled: !!id,
+  })
+}
+
+export function useCreateLGA() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: FormData) =>
+      apiFetch("/api/lgas", { method: "POST", body: data }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["lgas"] })
+    },
   })
 }
 

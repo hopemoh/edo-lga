@@ -6,27 +6,56 @@ export const loginSchema = z.object({
   password: z.string().optional(),
 })
 
-export const staffCreateSchema = z.object({
+const staffBaseSchema = z.object({
   name: z.string().min(1, "Name is required"),
   sex: z.enum(["M", "F"], { required_error: "Sex is required" }),
-  lgaId: z.string().min(1, "LGA is required"),
-  statusId: z.string().min(1, "Status is required"),
+  lgaId: z.string().min(1).optional(),
+  commissionId: z.string().min(1).optional(),
+  departmentId: z.string().min(1, "Department is required"),
   phoneNumber: z.string().min(10, "Phone number must be at least 10 digits"),
   sgl: z.coerce.number().min(1, "SGL is required"),
   dateOfBirth: z.string().min(1, "Date of birth is required"),
   dateOfFirstAppt: z.string().min(1, "First appointment date is required"),
   dateOfConf: z.string().min(1, "Confirmation date is required"),
   dateOfPresentAppt: z.string().min(1, "Present appointment date is required"),
-  recommendedRetirementDate: z.string().optional(),
   remark: z.string().optional(),
 })
 
-export const staffUpdateSchema = staffCreateSchema.partial()
+function checkAssignment(
+  data: { lgaId?: string; commissionId?: string },
+  requireOne: boolean,
+  ctx: z.RefinementCtx
+) {
+  const hasLga = Boolean(data.lgaId)
+  const hasCommission = Boolean(data.commissionId)
+  if (hasLga && hasCommission) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["commissionId"],
+      message: "Assign a staff member to an LGA or a commission, not both",
+    })
+  }
+  if (requireOne && !hasLga && !hasCommission) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["lgaId"],
+      message: "Assign a staff member to an LGA or a commission",
+    })
+  }
+}
+
+export const staffCreateSchema = staffBaseSchema.superRefine((data, ctx) =>
+  checkAssignment(data, true, ctx)
+)
+
+export const staffUpdateSchema = staffBaseSchema.partial().superRefine((data, ctx) =>
+  checkAssignment(data, false, ctx)
+)
 
 const ALLOWED_CHANGE_FIELDS = [
   "name", "phoneNumber", "sex", "dateOfBirth", "dateOfFirstAppt",
-  "dateOfConf", "dateOfPresentAppt", "sgl", "recommendedRetirementDate",
-  "rank", "status", "qualifications", "remark", "documentUrl",
+  "dateOfConf", "dateOfPresentAppt", "sgl",
+  "rank", "department", "commissionId", "qualifications", "remark", "documentUrl",
 ]
 
 export const changeRequestSchema = z.object({
@@ -57,7 +86,8 @@ export const correctSchema = z.object({
 
 export const lgaSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  zone: z.string().min(1, "Zone is required"),
+  zone: z.string().min(1, "Zone is required").default("Commission"),
+  kind: z.enum(["LGA", "COMMISSION"]).default("LGA"),
   description: z.string().optional(),
 })
 
@@ -69,7 +99,7 @@ export const lgaDetailSchema = z.object({
   imageUrl: z.string().optional(),
 })
 
-export const statusSchema = z.object({
+export const departmentSchema = z.object({
   name: z.string().min(1, "Name is required"),
 })
 

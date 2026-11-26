@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Plus, Trash2, Edit2, X } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
-import { useQualifications, useCreateQualification, useDeleteQualification, useRanks, useCreateRank, useDeleteRank, useStatuses, useCreateStatus, useDeleteStatus } from "@/hooks/use-resources"
+import { useQualifications, useCreateQualification, useDeleteQualification, useRanks, useCreateRank, useDeleteRank, useDepartments, useCreateDepartment, useDeleteDepartment } from "@/hooks/use-resources"
 
 interface QualificationFormModalProps {
     open: boolean
@@ -22,17 +22,17 @@ export default function QualificationFormModal({ open, onClose }: QualificationF
 
     const { data: qualifications = [] } = useQualifications()
     const { data: ranks = [] } = useRanks()
-    const { data: statuses = [] } = useStatuses()
+    const { data: departments = [] } = useDepartments()
 
     const createQualification = useCreateQualification()
     const deleteQualification = useDeleteQualification()
     const createRank = useCreateRank()
     const deleteRank = useDeleteRank()
-    const createStatus = useCreateStatus()
-    const deleteStatus = useDeleteStatus()
+    const createDepartment = useCreateDepartment()
+    const deleteDepartment = useDeleteDepartment()
 
-    const createMutation = activeTab === "qualifications" ? createQualification : activeTab === "ranks" ? createRank : createStatus
-    const deleteMutation = activeTab === "qualifications" ? deleteQualification : activeTab === "ranks" ? deleteRank : deleteStatus
+    const createMutation = activeTab === "qualifications" ? createQualification : activeTab === "ranks" ? createRank : createDepartment
+    const deleteMutation = activeTab === "qualifications" ? deleteQualification : activeTab === "ranks" ? deleteRank : deleteDepartment
 
     const handleSave = (e: React.FormEvent) => {
         e.preventDefault()
@@ -61,7 +61,7 @@ export default function QualificationFormModal({ open, onClose }: QualificationF
         setFormData({ name: item.name })
     }
 
-    const items = activeTab === "qualifications" ? qualifications : activeTab === "ranks" ? ranks : statuses
+    const items = activeTab === "qualifications" ? qualifications : activeTab === "ranks" ? ranks : departments
 
     const renderForm = () => (
         <form onSubmit={handleSave} className="space-y-4 bg-muted/30 p-4 rounded-lg mb-6 border border-border">
@@ -97,7 +97,7 @@ export default function QualificationFormModal({ open, onClose }: QualificationF
     )
 
     const renderList = () => (
-        <div className="space-y-2 max-h-[400px] overflow-y-auto">
+        <div className="space-y-2 max-h-100 overflow-y-auto">
             <AnimatePresence>
                 {items.map((item: any) => (
                     <motion.div
@@ -136,14 +136,14 @@ export default function QualificationFormModal({ open, onClose }: QualificationF
         <Dialog open={open} onOpenChange={onClose}>
             <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle>Manage Qualifications, Ranks & Statuses</DialogTitle>
+                    <DialogTitle>Manage Qualifications, Ranks & Departments</DialogTitle>
                 </DialogHeader>
 
                 <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setEditingId(null); setFormData({ name: "" }) }}>
                     <TabsList className="grid w-full grid-cols-3">
                         <TabsTrigger value="qualifications">Qualifications</TabsTrigger>
                         <TabsTrigger value="ranks">Ranks</TabsTrigger>
-                        <TabsTrigger value="statuses">Statuses</TabsTrigger>
+                        <TabsTrigger value="departments">Departments</TabsTrigger>
                     </TabsList>
 
                     <div className="mt-6">
@@ -155,7 +155,7 @@ export default function QualificationFormModal({ open, onClose }: QualificationF
                         <TabsContent value="ranks">
                             {renderList()}
                         </TabsContent>
-                        <TabsContent value="statuses">
+                        <TabsContent value="departments">
                             {renderList()}
                         </TabsContent>
                     </div>

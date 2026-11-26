@@ -66,7 +66,7 @@ const sections: Section[] = [
           <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
             <li>Log in with the default admin credentials</li>
             <li>Navigate to <strong>System Settings</strong> (gear icon) to configure document replacement window</li>
-            <li>Go to <strong>Manage Status, Ranks &amp; Qualifications</strong> to set up employment statuses and ranks</li>
+            <li>Go to <strong>Manage Departments, Ranks &amp; Qualifications</strong> to set up departments and ranks</li>
             <li>Use <strong>Bulk Import</strong> to upload your staff records via Excel</li>
             <li>Update LGA details for each of the 18 LGAs</li>
           </ol>

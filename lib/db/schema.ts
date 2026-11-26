@@ -6,15 +6,20 @@ import {
   boolean,
   json,
   real,
+  date,
   unique,
+  uniqueIndex,
   index,
+  check,
   pgEnum,
 } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 
 // ─── Enums ──────────────────────────────────────────────────────────────────
 
 export const roleEnum = pgEnum("Role", ["STAFF", "ADMIN", "CHAIRMAN", "SECRETARY"]);
+
+export const entityKindEnum = pgEnum("EntityKind", ["LGA", "COMMISSION"]);
 
 export const officeNameEnum = pgEnum("OfficeName", ["CHAIRMAN", "SECRETARY"]);
 
@@ -62,7 +67,13 @@ export const lgas = pgTable(
     id: text("id").primaryKey(),
     name: text("name").notNull(),
     zone: text("zone").notNull(),
-  }
+    kind: entityKindEnum("kind").notNull().default("LGA"),
+  },
+  (table) => [
+    uniqueIndex("lgas_commission_name_unique")
+      .on(sql`lower(${table.name})`)
+      .where(sql`${table.kind} = 'COMMISSION'`),
+  ]
 );
 
 export const lgaDetails = pgTable(
@@ -82,8 +93,8 @@ export const lgaDetails = pgTable(
   }
 );
 
-export const statuses = pgTable(
-  "statuses",
+export const departments = pgTable(
+  "departments",
   {
     id: text("id").primaryKey(),
     name: text("name").notNull().unique(),
@@ -123,9 +134,11 @@ export const staff = pgTable(
     serialNumber: integer("serialNumber").notNull().unique(),
     name: text("name").notNull(),
     sex: text("sex").notNull(),
-    statusId: text("statusId")
+    departmentId: text("departmentId")
       .notNull()
-      .references(() => statuses.id),
+      .references(() => departments.id),
+    commissionId: text("commissionId")
+      .references(() => lgas.id, { onDelete: "cascade" }),
     role: roleEnum("role").notNull().default("STAFF"),
     sgl: integer("sgl").notNull().default(0),
     dateOfBirth: timestamp("dateOfBirth").notNull(),
@@ -133,7 +146,15 @@ export const staff = pgTable(
     dateOfConf: timestamp("dateOfConf"),
     dateOfPresentAppt: timestamp("dateOfPresentAppt"),
     phoneNumber: text("phoneNumber").notNull(),
-    recommendedRetirementDate: timestamp("recommendedRetirementDate"),
+    proposedRetirementAge: date("proposedRetirementAge", { mode: "string" }).generatedAlwaysAs(
+      sql`("dateOfBirth" + interval '60 years')::date`
+    ),
+    proposedRetirementByAppt: date("proposedRetirementByAppt", { mode: "string" }).generatedAlwaysAs(
+      sql`("dateOfFirstAppt" + interval '35 years')::date`
+    ),
+    proposedRetirementDate: date("proposedRetirementDate", { mode: "string" }).generatedAlwaysAs(
+      sql`least(("dateOfBirth" + interval '60 years')::date, ("dateOfFirstAppt" + interval '35 years')::date)`
+    ),
     documentUrl: text("documentUrl"),
     canUpdateDocument: boolean("canUpdateDocument").notNull().default(false),
     remark: text("remark"),
@@ -146,7 +167,13 @@ export const staff = pgTable(
   },
   (table) => [
     index("staff_lgaId_idx").on(table.lgaId),
-    index("staff_statusId_idx").on(table.statusId),
+    index("staff_departmentId_idx").on(table.departmentId),
+    index("staff_commissionId_idx").on(table.commissionId),
+    uniqueIndex("staff_phone_normalized_unique").on(sql`ltrim(${table.phoneNumber}, '0')`),
+    check(
+      "staff_single_assignment_check",
+      sql`not (${table.lgaId} is not null and ${table.commissionId} is not null)`
+    ),
   ]
 );
 
@@ -462,7 +489,7 @@ export const lgaDetailsRelations = relations(lgaDetails, ({ one }) => ({
   }),
 }));
 
-export const statusesRelations = relations(statuses, ({ many }) => ({
+export const departmentsRelations = relations(departments, ({ many }) => ({
   staffMembers: many(staff),
 }));
 
@@ -483,9 +510,13 @@ export const staffRelations = relations(staff, ({ one, many }) => ({
     fields: [staff.lgaId],
     references: [lgas.id],
   }),
-  status: one(statuses, {
-    fields: [staff.statusId],
-    references: [statuses.id],
+  department: one(departments, {
+    fields: [staff.departmentId],
+    references: [departments.id],
+  }),
+  commission: one(lgas, {
+    fields: [staff.commissionId],
+    references: [lgas.id],
   }),
   ranks: many(staffRanks),
   qualifications: many(staffQualifications),

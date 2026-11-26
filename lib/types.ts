@@ -13,11 +13,12 @@ export interface StaffQualification {
 
 export interface Staff {
   id: string;
-  lgaId: string;
+  lgaId?: string | null;
+  commissionId?: string | null;
   serialNumber: number;
   name: string;
   sex: "M" | "F";
-  status: { id: string; name: string } | string;
+  department: { id: string; name: string } | string;
   rank?: { id: string; name: string } | null;
   sgl: number;
   dateOfBirth: Date;
@@ -26,13 +27,16 @@ export interface Staff {
   dateOfPresentAppt: Date;
   lgaOfOrigin: string;
   phoneNumber: string;
-  recommendedRetirementDate: Date;
+  proposedRetirementAge: string | null;
+  proposedRetirementByAppt: string | null;
+  proposedRetirementDate: string | null;
   qualifications: StaffQualification[];
   documentUrl?: string;
   remark?: string;
   certifications?: string[];
   yearsExperience?: number;
-  lga?: { id: string; name: string };
+  lga?: { id: string; name: string } | null;
+  commission?: { id: string; name: string } | null;
   canUpdateDetails?: boolean;
   role?: "STAFF" | "ADMIN" | "CHAIRMAN" | "SECRETARY";
   isExternal?: boolean;

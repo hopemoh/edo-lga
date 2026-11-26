@@ -51,20 +51,20 @@ async function findOrCreateQualification(qualName: string): Promise<string | nul
   return newQual[0].id;
 }
 
-async function findOrCreateStatus(statusName: string): Promise<string> {
-  const { statuses } = await import("@/lib/db/schema");
+async function findOrCreateDepartment(departmentName: string): Promise<string> {
+  const { departments } = await import("@/lib/db/schema");
 
-  const existing = await db.query.statuses.findFirst({
-    where: eq(statuses.name, statusName.trim()),
+  const existing = await db.query.departments.findFirst({
+    where: eq(departments.name, departmentName.trim()),
   });
 
   if (existing) return existing.id;
 
-  const newStatus = await db
-    .insert(statuses)
-    .values({ id: generateId(), name: statusName.trim() })
+  const newDepartment = await db
+    .insert(departments)
+    .values({ id: generateId(), name: departmentName.trim() })
     .returning();
-  return newStatus[0].id;
+  return newDepartment[0].id;
 }
 
 export async function POST(request: NextRequest) {
@@ -150,9 +150,9 @@ export async function POST(request: NextRequest) {
                 continue;
               }
 
-              const statusId = data.status
-                ? await findOrCreateStatus(data.status)
-                : await findOrCreateStatus("ACTIVE");
+              const departmentId = data.department
+                ? await findOrCreateDepartment(data.department)
+                : await findOrCreateDepartment("ACTIVE");
 
               const staffId = generateId();
 
@@ -162,7 +162,7 @@ export async function POST(request: NextRequest) {
                 serialNumber: nextSerial++,
                 name: data.name.trim(),
                 sex: data.sex || "M",
-                statusId,
+                departmentId,
                 sgl: data.sgl || 0,
                 dateOfBirth: data.dateOfBirth
                   ? new Date(data.dateOfBirth)
@@ -175,9 +175,6 @@ export async function POST(request: NextRequest) {
                   ? new Date(data.dateOfPresentAppt)
                   : null,
                 phoneNumber: data.phoneNumber || "",
-                recommendedRetirementDate: data.recommendedRetirementDate
-                  ? new Date(data.recommendedRetirementDate)
-                  : null,
                 remark: data.remark,
               });
 
@@ -398,9 +395,9 @@ export async function PUT(request: NextRequest) {
                 updateData.remark = row.remark;
               }
 
-              if (row.status) {
-                const statusId = await findOrCreateStatus(row.status);
-                updateData.statusId = statusId;
+              if (row.department) {
+                const departmentId = await findOrCreateDepartment(row.department);
+                updateData.departmentId = departmentId;
               }
 
               if (Object.keys(updateData).length > 1) {

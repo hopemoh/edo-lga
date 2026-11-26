@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { staff, lgas } from "@/lib/db/schema";
+import { staff } from "@/lib/db/schema";
 import { generateToken, generateRefreshToken, verifyPassword } from "@/lib/auth";
 import { loginSchema } from "@/lib/validations";
 import { logError } from "@/lib/error-logger";
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     const normalizedPhone = phoneNumber.replace(/^0+/, "");
 
     const staffRecord = await db.query.staff.findFirst({
-      where: eq(staff.phoneNumber, normalizedPhone),
+      where: sql`ltrim(${staff.phoneNumber}, '0') = ${normalizedPhone}`,
       with: {
         lga: true,
       },
@@ -117,7 +117,8 @@ export async function POST(request: NextRequest) {
         lgaId: staffRecord.lgaId,
         lgaName: staffRecord.lga?.name,
         phoneNumber: staffRecord.phoneNumber,
-        statusId: staffRecord.statusId,
+        departmentId: staffRecord.departmentId,
+        commissionId: staffRecord.commissionId,
       },
       mustChangePassword: !staffRecord.hasChangedPassword,
     });

@@ -41,7 +41,7 @@ export default function StaffTable({ staff, onUpdate, onEdit, isAdmin = false, c
               <tr>
                 <th className="px-4 py-3 text-left font-medium">Name</th>
                 <th className="px-4 py-3 text-left font-medium">Sex</th>
-                <th className="px-4 py-3 text-left font-medium">Status</th>
+                <th className="px-4 py-3 text-left font-medium">Department</th>
                 <th className="px-4 py-3 text-left font-medium">Rank</th>
                 <th className="px-4 py-3 text-left font-medium">Qualifications</th>
                 <th className="px-4 py-3 text-left font-medium">SGL</th>
@@ -63,7 +63,7 @@ export default function StaffTable({ staff, onUpdate, onEdit, isAdmin = false, c
                       </span>
                     </td>
                     <td className="px-4 py-3">{s.sex}</td>
-                    <td className="px-4 py-3">{(s.status as any)?.name || s.status}</td>
+                    <td className="px-4 py-3">{(s.department as any)?.name || s.department || 'N/A'}</td>
                     <td className="px-4 py-3">{s.rank?.name || 'N/A'}</td>
                     <td className="px-4 py-3 text-xs">
                       {(s.qualifications as any)?.length > 0

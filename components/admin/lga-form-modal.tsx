@@ -9,8 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { SignedImage } from "@/components/ui/signed-image"
 import { motion } from "framer-motion"
+import { Trash2 } from "lucide-react"
 import RichTextEditor from "@/components/ui/rich-text-editor"
-import { useLGA, useUpdateLGA } from "@/hooks/use-lgas"
+import { useLGA, useUpdateLGA, useCreateLGA } from "@/hooks/use-lgas"
+import { useCreateCommission, useUpdateCommission, useDeleteCommission } from "@/hooks/use-commissions"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { lgaDetailSchema } from "@/lib/validations"
@@ -23,9 +25,12 @@ interface LGAFormModalProps {
   onClose: () => void
   onSuccess: () => void
   lgaId?: string
+  kind?: "LGA" | "COMMISSION"
+  canManage?: boolean
 }
 
-export default function LGAFormModal({ open, onClose, onSuccess, lgaId }: LGAFormModalProps) {
+export default function LGAFormModal({ open, onClose, onSuccess, lgaId, kind = "LGA", canManage = true }: LGAFormModalProps) {
+  const isCommission = kind === "COMMISSION"
   const [formData, setFormData] = useState({
     id: "",
     name: "",
@@ -40,6 +45,12 @@ export default function LGAFormModal({ open, onClose, onSuccess, lgaId }: LGAFor
 
   const { data: lga } = useLGA(lgaId || "")
   const updateLGA = useUpdateLGA()
+  const createLGA = useCreateLGA()
+  const createCommission = useCreateCommission()
+  const updateCommission = useUpdateCommission()
+  const deleteCommission = useDeleteCommission()
+
+  const entityLabel = isCommission ? "Commission" : "LGA"
 
   const { register, handleSubmit, formState: { errors }, reset, setValue, watch } = useForm<LGAFormValues>({
     resolver: zodResolver(lgaDetailSchema),
@@ -54,7 +65,7 @@ export default function LGAFormModal({ open, onClose, onSuccess, lgaId }: LGAFor
       const newFormData = {
         id: lga.id,
         name: lga.name,
-        zone: lga.zone || "Northern",
+        zone: lga.zone || (isCommission ? "Commission" : "Northern"),
         description: lga.details?.description || "",
         landmarks: lga.details?.landmarks?.join(", ") || "",
         activities: lga.details?.activities?.join(", ") || "",
@@ -68,7 +79,7 @@ export default function LGAFormModal({ open, onClose, onSuccess, lgaId }: LGAFor
       })
     } else if (open && !lgaId) {
       const empty = {
-        id: "", name: "", zone: "Northern", description: "",
+        id: "", name: "", zone: isCommission ? "Commission" : "Northern", description: "",
         landmarks: "", activities: "",
         image: null, currentImageUrl: ""
       }
@@ -83,7 +94,8 @@ export default function LGAFormModal({ open, onClose, onSuccess, lgaId }: LGAFor
     const formDataToSend = new FormData()
 
     formDataToSend.append('name', formData.name)
-    formDataToSend.append('zone', formData.zone)
+    formDataToSend.append('zone', isCommission ? "Commission" : formData.zone)
+    formDataToSend.append('kind', kind)
     formDataToSend.append('description', data.description || "")
     formDataToSend.append('landmarks', formData.landmarks)
     formDataToSend.append('activities', formData.activities)
@@ -92,27 +104,46 @@ export default function LGAFormModal({ open, onClose, onSuccess, lgaId }: LGAFor
       formDataToSend.append('image', formData.image)
     }
 
-    if (!lgaId) {
-      formDataToSend.append('id', formData.id.toLowerCase().replace(/\s+/g, '-'))
+    const onDone = {
+      onSuccess: () => {
+        setFormData({
+          id: "", name: "", zone: isCommission ? "Commission" : "Northern", description: "",
+          landmarks: "", activities: "",
+          image: null, currentImageUrl: ""
+        })
+        reset()
+        onSuccess()
+        onClose()
+      },
+      onError: (err: any) => {
+        setError(err.message || "Couldn't save your changes. Please try again.")
+      },
     }
 
     if (lgaId) {
-      updateLGA.mutate({ id: lgaId, data: formDataToSend }, {
-        onSuccess: () => {
-          setFormData({
-            id: "", name: "", zone: "Northern", description: "",
-            landmarks: "", activities: "",
-            image: null, currentImageUrl: ""
-          })
-          reset()
-          onSuccess()
-          onClose()
-        },
-        onError: (err: any) => {
-          setError(err.message || "Couldn't save your changes. Please try again.")
-        }
-      })
+      if (isCommission) {
+        updateCommission.mutate({ id: lgaId, data: formDataToSend }, onDone)
+      } else {
+        updateLGA.mutate({ id: lgaId, data: formDataToSend }, onDone)
+      }
+    } else if (isCommission) {
+      createCommission.mutate(formDataToSend, onDone)
+    } else {
+      createLGA.mutate(formDataToSend, onDone)
     }
+  }
+
+  const handleDelete = () => {
+    if (!lgaId || !isCommission) return
+    deleteCommission.mutate(lgaId, {
+      onSuccess: () => {
+        onSuccess()
+        onClose()
+      },
+      onError: (err: any) => {
+        setError(err.message || "Couldn't delete the commission. Please try again.")
+      },
+    })
   }
 
   const updateField = (field: string, value: string) => {
@@ -123,7 +154,7 @@ export default function LGAFormModal({ open, onClose, onSuccess, lgaId }: LGAFor
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto antialiased">
         <DialogHeader>
-          <DialogTitle className="antialiased">{lgaId ? 'Update LGA' : 'Add New LGA'}</DialogTitle>
+          <DialogTitle className="antialiased">{lgaId ? `Update ${entityLabel}` : `Add New ${entityLabel}`}</DialogTitle>
         </DialogHeader>
 
         <motion.form
@@ -137,7 +168,7 @@ export default function LGAFormModal({ open, onClose, onSuccess, lgaId }: LGAFor
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {!lgaId && (
               <div className="space-y-2">
-                <Label htmlFor="name">LGA Name</Label>
+                <Label htmlFor="name">{entityLabel} Name</Label>
                 <Input
                   id="name"
                   value={formData.name}
@@ -151,7 +182,7 @@ export default function LGAFormModal({ open, onClose, onSuccess, lgaId }: LGAFor
 
             {lgaId && (
               <div className="space-y-2">
-                <Label htmlFor="name">LGA Name</Label>
+                <Label htmlFor="name">{entityLabel} Name</Label>
                 <Input
                   id="name"
                   value={formData.name}
@@ -160,29 +191,31 @@ export default function LGAFormModal({ open, onClose, onSuccess, lgaId }: LGAFor
               </div>
             )}
 
-            <div className="space-y-2">
-              <Label htmlFor="zone">Zone</Label>
-              <Select value={formData.zone} onValueChange={(value) => updateField('zone', value)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Northern">Northern</SelectItem>
-                  <SelectItem value="Central">Central</SelectItem>
-                  <SelectItem value="Southern">Southern</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {!isCommission && (
+              <div className="space-y-2">
+                <Label htmlFor="zone">Zone</Label>
+                <Select value={formData.zone} onValueChange={(value) => updateField('zone', value)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Northern">Northern</SelectItem>
+                    <SelectItem value="Central">Central</SelectItem>
+                    <SelectItem value="Southern">Southern</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="image">LGA Image</Label>
+            <Label htmlFor="image">{entityLabel} Image</Label>
             {formData.currentImageUrl && (
               <div className="mb-2">
                 <SignedImage
                   src={formData.currentImageUrl}
-                  alt="Current LGA image"
+                  alt={`Current ${entityLabel.toLowerCase()} image`}
                   className="w-32 h-24 object-cover rounded border"
                 />
                 <p className="text-sm text-muted-foreground">Current image</p>
@@ -263,8 +296,16 @@ export default function LGAFormModal({ open, onClose, onSuccess, lgaId }: LGAFor
             <Button type="button" variant="outline" onClick={onClose} className="flex-1">
               Cancel
             </Button>
-            <Button type="submit" disabled={updateLGA.isPending} className="flex-1">
-              {updateLGA.isPending ? `${lgaId ? 'Updating' : 'Creating'}...` : `${lgaId ? 'Update' : 'Create'} LGA`}
+            {isCommission && lgaId && canManage && (
+              <Button type="button" variant="destructive" onClick={handleDelete} disabled={deleteCommission.isPending}>
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete
+              </Button>
+            )}
+            <Button type="submit" disabled={!canManage || updateLGA.isPending || createLGA.isPending || createCommission.isPending || updateCommission.isPending} className="flex-1">
+              {updateLGA.isPending || updateCommission.isPending || createLGA.isPending || createCommission.isPending
+                ? `${lgaId ? 'Updating' : 'Creating'}...`
+                : `${lgaId ? 'Update' : 'Create'} ${entityLabel}`}
             </Button>
           </div>
         </motion.form>

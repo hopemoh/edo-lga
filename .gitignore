@@ -46,3 +46,8 @@ next-env.d.ts
 
 # uploads (files stored in S3)
 /uploads
+
+/docs
+bulk-import-template.xlsx
+
+

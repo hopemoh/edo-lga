@@ -2,7 +2,7 @@ import { db } from "../lib/db";
 import {
   lgas,
   lgaDetails,
-  statuses,
+  departments,
   changeReasons,
   staff,
 } from "../lib/db/schema";
@@ -59,8 +59,8 @@ async function main() {
     }
   }
 
-  // Create Statuses
-  const statusNames = [
+  // Create Departments
+  const departmentNames = [
     "HOD",
     "OFFICER",
     "EXECUTIVE",
@@ -77,13 +77,13 @@ async function main() {
     "ASSISTANT",
   ];
 
-  for (const name of statusNames) {
-    const existing = await db.query.statuses.findFirst({
-      where: eq(statuses.name, name),
+  for (const name of departmentNames) {
+    const existing = await db.query.departments.findFirst({
+      where: eq(departments.name, name),
     });
     if (!existing) {
-      await db.insert(statuses).values({ id: crypto.randomUUID(), name });
-      console.log(`  Created Status: ${name}`);
+      await db.insert(departments).values({ id: crypto.randomUUID(), name });
+      console.log(`  Created Department: ${name}`);
     }
   }
 
@@ -94,9 +94,8 @@ async function main() {
     { name: "Change of date of birth", requiresDocument: true },
     { name: "Correction of phone number", requiresDocument: false },
     { name: "Rank adjustment", requiresDocument: true },
-    { name: "Status change", requiresDocument: true },
+    { name: "Department change", requiresDocument: true },
     { name: "Correction of appointment dates", requiresDocument: false },
-    { name: "Update retirement date", requiresDocument: true },
     { name: "Change of marital status", requiresDocument: true },
     { name: "Correction of SGL", requiresDocument: false },
     { name: "Update contact information", requiresDocument: false },
@@ -119,11 +118,11 @@ async function main() {
   }
 
   // Create Admin User
-  const adminStatus = await db.query.statuses.findFirst({
-    where: eq(statuses.name, "HOD"),
+  const adminDepartment = await db.query.departments.findFirst({
+    where: eq(departments.name, "HOD"),
   });
 
-  if (adminStatus) {
+  if (adminDepartment) {
     const existingAdmin = await db.query.staff.findFirst({
       where: eq(staff.phoneNumber, "08123456789"),
     });
@@ -135,7 +134,7 @@ async function main() {
         serialNumber: 1,
         name: "Real Admin",
         sex: "M",
-        statusId: adminStatus.id,
+        departmentId: adminDepartment.id,
         role: "ADMIN",
         sgl: 17,
         dateOfBirth: new Date("1980-03-03"),
@@ -143,7 +142,6 @@ async function main() {
         dateOfConf: new Date("2022-01-01"),
         dateOfPresentAppt: new Date("2023-01-01"),
         phoneNumber: "08123456789",
-        recommendedRetirementDate: new Date("2045-01-01"),
         remark: "Real Admin User",
       });
       console.log("  Created Admin user");

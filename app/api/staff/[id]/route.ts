@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql, ne } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   staff,
@@ -36,7 +36,8 @@ export async function GET(
       where: eq(staff.id, id),
       with: {
         lga: true,
-        status: true,
+        commission: true,
+        department: true,
         ranks: {
           with: {
             rank: true,
@@ -111,16 +112,17 @@ export async function PUT(
       return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
     }
     const {
+      lgaId,
+      commissionId,
       name,
       sex,
-      statusId,
+      departmentId,
       sgl,
       dateOfBirth,
       dateOfFirstAppt,
       dateOfConf,
       dateOfPresentAppt,
       phoneNumber,
-      recommendedRetirementDate,
       remark,
     } = parsed.data;
 
@@ -139,11 +141,33 @@ export async function PUT(
       return NextResponse.json({ error: "The item you're looking for couldn't be found." }, { status: 404 });
     }
 
+    if (phoneNumber !== undefined) {
+      const duplicatePhone = await db
+        .select({ id: staff.id })
+        .from(staff)
+        .where(and(sql`ltrim(${staff.phoneNumber}, '0') = ltrim(${phoneNumber}, '0')`, ne(staff.id, id)))
+        .limit(1);
+      if (duplicatePhone.length > 0) {
+        return NextResponse.json(
+          { error: "That phone number is already used by another staff member." },
+          { status: 409 }
+        );
+      }
+    }
+
     const updateData: Record<string, any> = { updatedAt: new Date() };
 
+    if (lgaId !== undefined) {
+      updateData.lgaId = lgaId;
+      updateData.commissionId = null;
+    }
+    if (commissionId !== undefined) {
+      updateData.commissionId = commissionId;
+      updateData.lgaId = null;
+    }
     if (name !== undefined) updateData.name = name;
     if (sex !== undefined) updateData.sex = sex;
-    if (statusId !== undefined) updateData.statusId = statusId;
+    if (departmentId !== undefined) updateData.departmentId = departmentId;
     if (staffRole !== undefined) updateData.role = staffRole;
     if (sgl !== undefined) updateData.sgl = sgl;
     if (dateOfBirth !== undefined) updateData.dateOfBirth = new Date(dateOfBirth);
@@ -151,11 +175,6 @@ export async function PUT(
     if (dateOfConf !== undefined) updateData.dateOfConf = dateOfConf ? new Date(dateOfConf) : null;
     if (dateOfPresentAppt !== undefined) updateData.dateOfPresentAppt = dateOfPresentAppt ? new Date(dateOfPresentAppt) : null;
     if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber;
-    if (recommendedRetirementDate !== undefined) {
-      updateData.recommendedRetirementDate = recommendedRetirementDate
-        ? new Date(recommendedRetirementDate)
-        : null;
-    }
     if (remark !== undefined) updateData.remark = remark;
     if (yearsExperience !== undefined) updateData.yearsExperience = yearsExperience;
 
@@ -233,6 +252,18 @@ export async function PUT(
   } catch (error) {
     const token = getTokenFromRequest(request);
     const user = token ? verifyToken(token) : null;
+    if ((error as { code?: string })?.code === "23505") {
+      return NextResponse.json(
+        { error: "That phone number is already used by another staff member." },
+        { status: 409 }
+      );
+    }
+    if ((error as { code?: string })?.code === "23514") {
+      return NextResponse.json(
+        { error: "Assign a staff member to an LGA or a commission, not both." },
+        { status: 422 }
+      );
+    }
     await logError({
       source: "api/staff/[id]",
       message: error instanceof Error ? error.message : "Unknown error",

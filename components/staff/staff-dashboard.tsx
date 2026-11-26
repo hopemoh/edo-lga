@@ -85,7 +85,7 @@ export default function StaffDashboard() {
       (s) =>
         s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         s.phoneNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (typeof s.status === 'string' ? s.status : (s.status as any).name).toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (typeof s.department === 'string' ? s.department : (s.department as any)?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (s.rank?.name || '').toLowerCase().includes(searchTerm.toLowerCase()),
     )
   }, [staff, searchTerm])
