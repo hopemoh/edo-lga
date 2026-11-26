@@ -28,6 +28,7 @@ interface StaffFormModalProps {
   onClose: () => void
   onSuccess: () => void
   lgaId?: string
+  commissionId?: string
   staffToEdit?: Staff | null
   isEditing?: boolean
   currentUserRole?: Role
@@ -43,7 +44,7 @@ interface ChangeRequest {
   status: string
 }
 
-export default function StaffFormModal({ open, onClose, onSuccess, lgaId: initialLgaId, staffToEdit, isEditing, currentUserRole }: StaffFormModalProps) {
+export default function StaffFormModal({ open, onClose, onSuccess, lgaId: initialLgaId, commissionId: initialCommissionId, staffToEdit, isEditing, currentUserRole }: StaffFormModalProps) {
   const [selectedQualifications, setSelectedQualifications] = useState<string[]>([])
   const [file, setFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
@@ -65,8 +66,8 @@ export default function StaffFormModal({ open, onClose, onSuccess, lgaId: initia
     defaultValues: {
       name: "",
       sex: "M",
-      lgaId: initialLgaId || "",
-      commissionId: "",
+      lgaId: initialCommissionId ? undefined : initialLgaId || "",
+      commissionId: initialCommissionId || "",
       departmentId: "",
       phoneNumber: "",
       sgl: 1,
@@ -119,12 +120,12 @@ export default function StaffFormModal({ open, onClose, onSuccess, lgaId: initia
           setSelectedQualifications((staffToEdit.qualifications as any[])?.map((q: any) => q.qualificationId || q.id) || [])
         }
       } else {
-        setAssignmentType("lga")
+        setAssignmentType(initialCommissionId ? "commission" : "lga")
         reset({
           name: "",
           sex: "M",
-          lgaId: initialLgaId || "",
-          commissionId: "",
+          lgaId: initialCommissionId ? undefined : initialLgaId || "",
+          commissionId: initialCommissionId || "",
           departmentId: "",
           phoneNumber: "",
           sgl: 1,
@@ -209,7 +210,12 @@ export default function StaffFormModal({ open, onClose, onSuccess, lgaId: initia
           }
         )
       } else {
-        const staffData = { ...data, qualificationIds: selectedQualifications }
+        const staffData = {
+          ...data,
+          lgaId: data.lgaId || undefined,
+          commissionId: data.commissionId || undefined,
+          qualificationIds: selectedQualifications,
+        }
         const formDataWithFile = new FormData()
         formDataWithFile.append('data', JSON.stringify(staffData))
         if (file) {

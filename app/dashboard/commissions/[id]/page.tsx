@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import dynamic from "next/dynamic"
 import { useParams, useRouter } from "next/navigation"
-import { ArrowLeft, Building2, MapPin, Pencil, Users } from "lucide-react"
+import { ArrowLeft, Building2, MapPin, Pencil, Plus, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -13,6 +13,7 @@ import RichTextDisplay from "@/components/ui/rich-text-display"
 import StaffTable from "@/components/staff/staff-table"
 import StaffFormModal from "@/components/admin/staff-form-modal"
 import { useCommission, useCommissionStaff } from "@/hooks/use-commissions"
+import { useAuthenticated } from "@/hooks/use-auth-gate"
 import { useAuthStore } from "@/lib/store"
 import type { Staff } from "@/lib/types"
 
@@ -38,12 +39,9 @@ export default function CommissionDetailPage() {
   const router = useRouter()
   const params = useParams<{ id: string }>()
   const id = params.id
-  const [authenticated] = useState(() =>
-    typeof window !== "undefined" &&
-    Boolean(window.localStorage.getItem("currentUser")) &&
-    window.localStorage.getItem("mustChangePassword") !== "true"
-  )
+  const authenticated = useAuthenticated()
   const [showEdit, setShowEdit] = useState(false)
+  const [showAddStaff, setShowAddStaff] = useState(false)
   const [staffToEdit, setStaffToEdit] = useState<Staff | null>(null)
   const canManage = useAuthStore((s) => s.isAdmin())
   const userRole = useAuthStore((s) => s.user?.role) as
@@ -60,9 +58,7 @@ export default function CommissionDetailPage() {
     router.push(mustChangePassword === "true" ? "/change-password" : "/login")
   }, [authenticated, router])
 
-  if (!authenticated) return null
-
-  if (isLoading) {
+  if (!authenticated || isLoading) {
     return (
       <main className="min-h-screen bg-background p-6">
         <Card className="mx-auto max-w-5xl p-8">
@@ -141,10 +137,18 @@ export default function CommissionDetailPage() {
         </Card>
 
         <section className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Users className="h-5 w-5 text-primary" />
-            <h2 className="text-xl font-semibold">Staff</h2>
-            {!staffLoading && <Badge variant="outline">{staff.length}</Badge>}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-primary" />
+              <h2 className="text-xl font-semibold">Staff</h2>
+              {!staffLoading && <Badge variant="outline">{staff.length}</Badge>}
+            </div>
+            {canManage && (
+              <Button size="sm" onClick={() => setShowAddStaff(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add staff
+              </Button>
+            )}
           </div>
 
           {staffLoading && (
@@ -192,6 +196,14 @@ export default function CommissionDetailPage() {
         onSuccess={() => refetchStaff()}
         staffToEdit={staffToEdit}
         isEditing
+        currentUserRole={userRole}
+      />
+
+      <StaffFormModal
+        open={showAddStaff}
+        onClose={() => setShowAddStaff(false)}
+        onSuccess={() => refetchStaff()}
+        commissionId={id}
         currentUserRole={userRole}
       />
     </main>

@@ -10,17 +10,14 @@ import { Badge } from "@/components/ui/badge"
 import dynamic from "next/dynamic"
 import { SignedImage } from "@/components/ui/signed-image"
 import { useCommissions } from "@/hooks/use-commissions"
+import { useAuthenticated } from "@/hooks/use-auth-gate"
 import { useAuthStore } from "@/lib/store"
 
 const LGAFormModal = dynamic(() => import("@/components/admin/lga-form-modal"), { ssr: false })
 
 export default function CommissionsPage() {
   const router = useRouter()
-  const [authenticated] = useState(() =>
-    typeof window !== "undefined" &&
-    Boolean(window.localStorage.getItem("currentUser")) &&
-    window.localStorage.getItem("mustChangePassword") !== "true"
-  )
+  const authenticated = useAuthenticated()
   const [showCreate, setShowCreate] = useState(false)
   const canManage = useAuthStore((s) => s.isAdmin())
 
@@ -35,7 +32,16 @@ export default function CommissionsPage() {
     router.push(mustChangePassword === "true" ? "/change-password" : "/login")
   }, [authenticated, router])
 
-  if (!authenticated) return null
+  if (!authenticated) {
+    return (
+      <main className="min-h-screen bg-background p-6">
+        <div className="mx-auto max-w-6xl space-y-4">
+          <div className="h-8 w-56 animate-pulse rounded bg-muted/40" />
+          <div className="h-40 animate-pulse rounded bg-muted/40" />
+        </div>
+      </main>
+    )
+  }
 
   return (
     <main className="min-h-screen bg-background text-foreground">
