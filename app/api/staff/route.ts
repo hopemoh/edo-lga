@@ -36,10 +36,22 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const lgaIdParam = searchParams.get("lgaId");
+    const commissionIdParam = searchParams.get("commissionId");
+    if (lgaIdParam === "" || commissionIdParam === "") {
+      return NextResponse.json({ error: "Invalid id." }, { status: 400 });
+    }
+    if (lgaIdParam && commissionIdParam) {
+      return NextResponse.json(
+        { error: "Filter by an LGA or a commission, not both." },
+        { status: 400 }
+      );
+    }
 
     let whereCondition;
     if (user.role === "STAFF") {
       whereCondition = and(eq(staff.id, user.id), eq(staff.isExternal, false));
+    } else if (commissionIdParam) {
+      whereCondition = and(eq(staff.commissionId, commissionIdParam), eq(staff.isExternal, false));
     } else if (user.lgaId && !lgaIdParam) {
       whereCondition = and(eq(staff.lgaId, user.lgaId), eq(staff.isExternal, false));
     } else if (lgaIdParam) {
@@ -52,7 +64,8 @@ export async function GET(request: NextRequest) {
       where: whereCondition,
       with: {
         lga: true,
-        status: true,
+        commission: true,
+        department: true,
         ranks: {
           with: {
             rank: true,
@@ -148,18 +161,30 @@ export async function POST(request: NextRequest) {
 
     const {
       lgaId,
+      commissionId,
       name,
       sex,
-      statusId,
+      departmentId,
       sgl = 0,
       dateOfBirth,
       dateOfFirstAppt,
       dateOfConf,
       dateOfPresentAppt,
       phoneNumber,
-      recommendedRetirementDate,
       remark,
     } = parsed.data;
+
+    const duplicatePhone = await db
+      .select({ id: staff.id })
+      .from(staff)
+      .where(sql`ltrim(${staff.phoneNumber}, '0') = ltrim(${phoneNumber}, '0')`)
+      .limit(1);
+    if (duplicatePhone.length > 0) {
+      return NextResponse.json(
+        { error: "That phone number is already used by another staff member." },
+        { status: 409 }
+      );
+    }
 
     const serialNumber = body.serialNumber;
     const staffRole = body.role ?? "STAFF";
@@ -180,11 +205,12 @@ export async function POST(request: NextRequest) {
       .insert(staff)
       .values({
         id: staffId,
-        lgaId,
+        lgaId: lgaId || null,
+        commissionId: commissionId || null,
         serialNumber,
         name,
         sex,
-        statusId,
+        departmentId,
         role: staffRole as "STAFF" | "ADMIN",
         sgl,
         dateOfBirth: new Date(dateOfBirth),
@@ -192,9 +218,6 @@ export async function POST(request: NextRequest) {
         dateOfConf: dateOfConf ? new Date(dateOfConf) : null,
         dateOfPresentAppt: dateOfPresentAppt ? new Date(dateOfPresentAppt) : null,
         phoneNumber,
-        recommendedRetirementDate: recommendedRetirementDate
-          ? new Date(recommendedRetirementDate)
-          : null,
         documentUrl,
         remark,
         yearsExperience: yearsExperience || null,
@@ -241,6 +264,18 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const token = getTokenFromRequest(request);
     const user = token ? verifyToken(token) : null;
+    if ((error as { code?: string })?.code === "23505") {
+      return NextResponse.json(
+        { error: "That phone number is already used by another staff member." },
+        { status: 409 }
+      );
+    }
+    if ((error as { code?: string })?.code === "23514") {
+      return NextResponse.json(
+        { error: "Assign a staff member to an LGA or a commission, not both." },
+        { status: 422 }
+      );
+    }
     await logError({
       source: "api/staff",
       message: error instanceof Error ? error.message : "Unknown error",

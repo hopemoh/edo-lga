@@ -11,7 +11,8 @@ interface LoginResponse {
     lgaId?: string
     lgaName?: string
     phoneNumber?: string
-    statusId?: string
+    departmentId?: string
+    commissionId?: string
   }
   mustChangePassword: boolean
 }

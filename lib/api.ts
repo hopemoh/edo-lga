@@ -83,5 +83,15 @@ export async function apiFetch<T>(
     throw new ApiError(data.error || "Request failed", res.status)
   }
 
-  return res.json()
+  // DELETE routes return 204 with an empty body.
+  if (res.status === 204) {
+    return undefined as T
+  }
+
+  const text = await res.text()
+  if (!text) {
+    return undefined as T
+  }
+
+  return JSON.parse(text) as T
 }

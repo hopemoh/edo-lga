@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { offices, staff, logEntries, lgas, statuses } from "@/lib/db/schema";
+import { offices, staff, logEntries } from "@/lib/db/schema";
 import { getTokenFromRequest, verifyToken } from "@/lib/auth";
 import { createAuditLog } from "@/lib/approval-utils";
 import { logError } from "@/lib/error-logger";
@@ -106,8 +106,8 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const existingStatus = await db.query.statuses.findFirst();
-      if (!existingStatus) {
+      const existingDepartment = await db.query.departments.findFirst();
+      if (!existingDepartment) {
         return NextResponse.json(
           { error: "System setup incomplete. Please contact support." },
           { status: 500 }
@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
           serialNumber: nextSerial,
           name,
           sex: sex || "Male",
-          statusId: existingStatus.id,
+          departmentId: existingDepartment.id,
           role: "CHAIRMAN",
           dateOfBirth: new Date(dateOfBirth),
           dateOfFirstAppt: dateOfFirstAppt ? new Date(dateOfFirstAppt) : new Date(),

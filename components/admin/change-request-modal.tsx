@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { AlertCircle, Upload } from "lucide-react"
 import { motion } from "framer-motion"
 import type { Staff } from "@/lib/types"
-import { useChangeReasons, useRanks, useStatuses, useQualifications } from "@/hooks/use-resources"
+import { useChangeReasons, useRanks, useQualifications } from "@/hooks/use-resources"
 import { useCreateChangeRequest } from "@/hooks/use-change-requests"
 
 interface ChangeRequestModalProps {
@@ -40,9 +40,9 @@ const AVAILABLE_FIELDS: FieldOption[] = [
   { key: 'dateOfConf', label: 'Date of Confirmation', type: 'date' },
   { key: 'dateOfPresentAppt', label: 'Date of Present Appointment', type: 'date' },
   { key: 'sgl', label: 'SGL', type: 'text' },
-  { key: 'recommendedRetirementDate', label: 'Recommended Retirement Date', type: 'date' },
   { key: 'rank', label: 'Rank', type: 'select' },
-  { key: 'status', label: 'Status', type: 'select' },
+  { key: 'department', label: 'Department', type: 'select' },
+  { key: 'commissionId', label: 'Commission', type: 'select' },
   { key: 'qualifications', label: 'Qualifications', type: 'select' },
   { key: 'remark', label: 'Remark', type: 'text' },
   { key: 'documentUrl', label: 'Document (Credential)', type: 'text' },
@@ -66,7 +66,6 @@ export default function ChangeRequestModal({
 
   const { data: reasons = [] } = useChangeReasons()
   const { data: ranks = [] } = useRanks()
-  const { data: statuses = [] } = useStatuses()
   const { data: qualifications = [] } = useQualifications()
   const createMutation = useCreateChangeRequest()
 
@@ -95,9 +94,9 @@ export default function ChangeRequestModal({
       dateOfConf: staff.dateOfConf ? new Date(staff.dateOfConf).toISOString().split('T')[0] : '',
       dateOfPresentAppt: staff.dateOfPresentAppt ? new Date(staff.dateOfPresentAppt).toISOString().split('T')[0] : '',
       sgl: staff.sgl,
-      recommendedRetirementDate: staff.recommendedRetirementDate ? new Date(staff.recommendedRetirementDate).toISOString().split('T')[0] : '',
       rank: typeof staff.rank === 'object' ? staff.rank?.name : staff.rank,
-      status: typeof staff.status === 'object' ? staff.status?.name : staff.status,
+      department: typeof staff.department === 'object' ? staff.department?.name : staff.department,
+      commissionId: staff.commissionId || '',
       remark: staff.remark || '',
     })
     setError("")
@@ -231,9 +230,9 @@ export default function ChangeRequestModal({
       case 'dateOfConf': return staff.dateOfConf ? new Date(staff.dateOfConf).toISOString().split('T')[0] : ''
       case 'dateOfPresentAppt': return staff.dateOfPresentAppt ? new Date(staff.dateOfPresentAppt).toISOString().split('T')[0] : ''
       case 'sgl': return staff.sgl
-      case 'recommendedRetirementDate': return staff.recommendedRetirementDate ? new Date(staff.recommendedRetirementDate).toISOString().split('T')[0] : ''
       case 'rank': return typeof staff.rank === 'object' ? staff.rank?.name : staff.rank
-      case 'status': return typeof staff.status === 'object' ? staff.status?.name : staff.status
+      case 'department': return typeof staff.department === 'object' ? staff.department?.name : staff.department
+      case 'commissionId': return staff.commissionId || ''
       case 'remark': return staff.remark || ''
       default: return ''
     }
@@ -273,13 +272,13 @@ export default function ChangeRequestModal({
               placeholder="Current rank (for reference)"
             />
           )
-        } else if (field.key === 'status') {
+        } else if (field.key === 'department' || field.key === 'commissionId') {
           return (
             <Input
               value={formData[field.key] || 'Not set'}
               disabled={isDisabled}
               className="bg-gray-100 cursor-not-allowed"
-              placeholder="Current status (for reference)"
+              placeholder={`Current ${field.label.toLowerCase()} (for reference)`}
             />
           )
         } else if (field.key === 'qualifications') {

@@ -6,10 +6,10 @@ import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Trash2, Plus } from "lucide-react"
 import { motion } from "framer-motion"
-import { useStatuses, useCreateStatus, useDeleteStatus, useRanks, useCreateRank, useDeleteRank, useQualifications, useCreateQualification, useDeleteQualification } from "@/hooks/use-resources"
+import { useDepartments, useCreateDepartment, useDeleteDepartment, useRanks, useCreateRank, useDeleteRank, useQualifications, useCreateQualification, useDeleteQualification } from "@/hooks/use-resources"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { statusSchema, rankSchema, qualificationSchema } from "@/lib/validations"
+import { departmentSchema, rankSchema, qualificationSchema } from "@/lib/validations"
 import type { z } from "zod"
 
 interface StatusRankFormModalProps {
@@ -19,19 +19,19 @@ interface StatusRankFormModalProps {
 }
 
 export default function StatusRankFormModal({ open, onClose, onSuccess }: StatusRankFormModalProps) {
-  const { data: statuses = [] } = useStatuses()
+  const { data: departments = [] } = useDepartments()
   const { data: ranks = [] } = useRanks()
   const { data: qualifications = [] } = useQualifications()
 
-  const createStatus = useCreateStatus()
-  const deleteStatus = useDeleteStatus()
+  const createDepartment = useCreateDepartment()
+  const deleteDepartment = useDeleteDepartment()
   const createRank = useCreateRank()
   const deleteRank = useDeleteRank()
   const createQualification = useCreateQualification()
   const deleteQualification = useDeleteQualification()
 
-  const statusForm = useForm<z.infer<typeof statusSchema>>({
-    resolver: zodResolver(statusSchema),
+  const departmentForm = useForm<z.infer<typeof departmentSchema>>({
+    resolver: zodResolver(departmentSchema),
     defaultValues: { name: "" },
   })
 
@@ -45,10 +45,10 @@ export default function StatusRankFormModal({ open, onClose, onSuccess }: Status
     defaultValues: { name: "" },
   })
 
-  const addStatus = statusForm.handleSubmit((data) => {
-    createStatus.mutate({ name: data.name.trim() }, {
+  const addDepartment = departmentForm.handleSubmit((data) => {
+    createDepartment.mutate({ name: data.name.trim() }, {
       onSuccess: () => {
-        statusForm.reset()
+        departmentForm.reset()
         onSuccess()
       },
     })
@@ -72,8 +72,8 @@ export default function StatusRankFormModal({ open, onClose, onSuccess }: Status
     })
   })
 
-  const handleDeleteStatus = (id: string) => {
-    deleteStatus.mutate(id, {
+  const handleDeleteDepartment = (id: string) => {
+    deleteDepartment.mutate(id, {
       onSuccess: () => onSuccess(),
       onError: () => alert("Couldn't save your changes. Please try again.")
     })
@@ -97,46 +97,46 @@ export default function StatusRankFormModal({ open, onClose, onSuccess }: Status
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Manage Status, Ranks & Qualifications</DialogTitle>
+          <DialogTitle>Manage Departments, Ranks & Qualifications</DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue="status" className="w-full">
+        <Tabs defaultValue="departments" className="w-full">
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="status">Status</TabsTrigger>
+            <TabsTrigger value="departments">Departments</TabsTrigger>
             <TabsTrigger value="ranks">Ranks</TabsTrigger>
             <TabsTrigger value="qualifications">Qualifications</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="status" className="space-y-4">
-            <form onSubmit={addStatus} className="flex gap-2">
+          <TabsContent value="departments" className="space-y-4">
+            <form onSubmit={addDepartment} className="flex gap-2">
               <div className="flex-1 space-y-1">
                 <Input
-                  placeholder="Enter new status"
-                  {...statusForm.register("name")}
+                  placeholder="Enter new department"
+                  {...departmentForm.register("name")}
                 />
-                {statusForm.formState.errors.name && (
-                  <p className="text-sm text-destructive">{statusForm.formState.errors.name.message}</p>
+                {departmentForm.formState.errors.name && (
+                  <p className="text-sm text-destructive">{departmentForm.formState.errors.name.message}</p>
                 )}
               </div>
-              <Button type="submit" disabled={createStatus.isPending}>
+              <Button type="submit" disabled={createDepartment.isPending}>
                 <Plus className="w-4 h-4 mr-2" />
                 Add
               </Button>
             </form>
 
             <div className="space-y-2 max-h-60 overflow-y-auto">
-              {statuses.map((status: any) => (
+              {departments.map((department: any) => (
                 <motion.div
-                  key={status.id}
+                  key={department.id}
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   className="flex items-center justify-between p-3 border rounded-lg"
                 >
-                  <span>{status.name}</span>
+                  <span>{department.name}</span>
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => handleDeleteStatus(status.id)}
+                    onClick={() => handleDeleteDepartment(department.id)}
                     className="text-destructive hover:text-destructive"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -149,10 +149,7 @@ export default function StatusRankFormModal({ open, onClose, onSuccess }: Status
           <TabsContent value="ranks" className="space-y-4">
             <form onSubmit={addRank} className="flex gap-2">
               <div className="flex-1 space-y-1">
-                <Input
-                  placeholder="Enter new rank"
-                  {...rankForm.register("name")}
-                />
+                <Input placeholder="Enter new rank" {...rankForm.register("name")} />
                 {rankForm.formState.errors.name && (
                   <p className="text-sm text-destructive">{rankForm.formState.errors.name.message}</p>
                 )}
@@ -162,22 +159,11 @@ export default function StatusRankFormModal({ open, onClose, onSuccess }: Status
                 Add
               </Button>
             </form>
-
             <div className="space-y-2 max-h-60 overflow-y-auto">
               {ranks.map((rank: any) => (
-                <motion.div
-                  key={rank.id}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  className="flex items-center justify-between p-3 border rounded-lg"
-                >
+                <motion.div key={rank.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="flex items-center justify-between p-3 border rounded-lg">
                   <span>{rank.name}</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDeleteRank(rank.id)}
-                    className="text-destructive hover:text-destructive"
-                  >
+                  <Button variant="ghost" size="sm" onClick={() => handleDeleteRank(rank.id)} className="text-destructive hover:text-destructive">
                     <Trash2 className="w-4 h-4" />
                   </Button>
                 </motion.div>
@@ -188,10 +174,7 @@ export default function StatusRankFormModal({ open, onClose, onSuccess }: Status
           <TabsContent value="qualifications" className="space-y-4">
             <form onSubmit={addQualification} className="flex gap-2">
               <div className="flex-1 space-y-1">
-                <Input
-                  placeholder="Enter new qualification"
-                  {...qualificationForm.register("name")}
-                />
+                <Input placeholder="Enter new qualification" {...qualificationForm.register("name")} />
                 {qualificationForm.formState.errors.name && (
                   <p className="text-sm text-destructive">{qualificationForm.formState.errors.name.message}</p>
                 )}
@@ -201,22 +184,11 @@ export default function StatusRankFormModal({ open, onClose, onSuccess }: Status
                 Add
               </Button>
             </form>
-
             <div className="space-y-2 max-h-60 overflow-y-auto">
-              {qualifications.map((qual: any) => (
-                <motion.div
-                  key={qual.id}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  className="flex items-center justify-between p-3 border rounded-lg"
-                >
-                  <span>{qual.name}</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDeleteQualification(qual.id)}
-                    className="text-destructive hover:text-destructive"
-                  >
+              {qualifications.map((qualification: any) => (
+                <motion.div key={qualification.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="flex items-center justify-between p-3 border rounded-lg">
+                  <span>{qualification.name}</span>
+                  <Button variant="ghost" size="sm" onClick={() => handleDeleteQualification(qualification.id)} className="text-destructive hover:text-destructive">
                     <Trash2 className="w-4 h-4" />
                   </Button>
                 </motion.div>
@@ -224,12 +196,6 @@ export default function StatusRankFormModal({ open, onClose, onSuccess }: Status
             </div>
           </TabsContent>
         </Tabs>
-
-        <div className="flex justify-end pt-4">
-          <Button variant="outline" onClick={onClose}>
-            Close
-          </Button>
-        </div>
       </DialogContent>
     </Dialog>
   )

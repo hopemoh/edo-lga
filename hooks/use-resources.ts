@@ -2,22 +2,22 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { apiFetch } from "@/lib/api"
 import { toast } from "sonner"
 
-// --- Statuses ---
-export function useStatuses() {
+// --- Departments ---
+export function useDepartments() {
   return useQuery({
-    queryKey: ["statuses"],
-    queryFn: () => apiFetch<any[]>("/api/status"),
+    queryKey: ["departments"],
+    queryFn: () => apiFetch<any[]>("/api/departments"),
   })
 }
 
-export function useCreateStatus() {
+export function useCreateDepartment() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (data: any) =>
-      apiFetch("/api/status", { method: "POST", body: JSON.stringify(data) }),
+      apiFetch("/api/departments", { method: "POST", body: JSON.stringify(data) }),
     onSuccess: () => {
-      toast.success("Status created")
-      qc.invalidateQueries({ queryKey: ["statuses"] })
+      toast.success("Department created")
+      qc.invalidateQueries({ queryKey: ["departments"] })
     },
     onError: () => {
       toast.error("Couldn't save your changes. Please try again.")
@@ -25,14 +25,29 @@ export function useCreateStatus() {
   })
 }
 
-export function useDeleteStatus() {
+export function useUpdateDepartment() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, name }: { id: string; name: string }) =>
+      apiFetch(`/api/departments/${id}`, { method: "PUT", body: JSON.stringify({ name }) }),
+    onSuccess: () => {
+      toast.success("Department updated")
+      qc.invalidateQueries({ queryKey: ["departments"] })
+    },
+    onError: () => {
+      toast.error("Couldn't save your changes. Please try again.")
+    },
+  })
+}
+
+export function useDeleteDepartment() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: string) =>
-      apiFetch(`/api/status/${id}`, { method: "DELETE" }),
+      apiFetch(`/api/departments/${id}`, { method: "DELETE" }),
     onSuccess: () => {
-      toast.success("Status deleted")
-      qc.invalidateQueries({ queryKey: ["statuses"] })
+      toast.success("Department deleted")
+      qc.invalidateQueries({ queryKey: ["departments"] })
     },
     onError: () => {
       toast.error("Couldn't save your changes. Please try again.")

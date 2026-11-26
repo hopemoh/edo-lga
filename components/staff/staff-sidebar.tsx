@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useLGAs } from "@/hooks/use-lgas"
+import { useCommissions } from "@/hooks/use-commissions"
 import { Input } from "@/components/ui/input"
 import {
   Sidebar,
@@ -30,6 +31,7 @@ export default function StaffSidebar({ selectedLGA, onSelect, isAdmin = false }:
   const [searchTerm, setSearchTerm] = useState("")
   const [currentUser, setCurrentUser] = useState<any>(null)
   const lgasQuery = useLGAs()
+  const commissionsQuery = useCommissions()
 
   useEffect(() => {
     const user = localStorage.getItem("currentUser")
@@ -39,7 +41,14 @@ export default function StaffSidebar({ selectedLGA, onSelect, isAdmin = false }:
   }, [])
 
   const lgas = (lgasQuery.data ?? []) as LGA[]
+  const commissions = (commissionsQuery.data ?? []) as LGA[]
   const loading = lgasQuery.isLoading
+
+  const filteredCommissions = commissions.filter(
+    (commission) =>
+      commission.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (commission.zone && commission.zone.toLowerCase().includes(searchTerm.toLowerCase())),
+  )
 
   const filteredLGAs = lgas.filter(
     (lga) =>
@@ -202,6 +211,50 @@ export default function StaffSidebar({ selectedLGA, onSelect, isAdmin = false }:
                 ))}
               </AnimatePresence>
             </SidebarMenu>
+
+            <SidebarGroup>
+              <SidebarGroupLabel className="text-xs font-semibold uppercase tracking-wider opacity-50 px-3 py-2 mt-4">
+                Commissions
+              </SidebarGroupLabel>
+            </SidebarGroup>
+
+            <SidebarMenu>
+              {filteredCommissions.map((commission, index) => (
+                <motion.div
+                  key={commission.id}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.02 }}
+                >
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild size="lg" className="rounded-xl">
+                      <Link href={`/dashboard/commissions/${commission.id}`}>
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-sidebar-accent">
+                          <Building2 className="w-4 h-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <span className="font-medium text-sm block truncate">
+                            {commission.name}
+                          </span>
+                        </div>
+                        <ChevronRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </motion.div>
+              ))}
+            </SidebarMenu>
+
+            {commissionsQuery.isLoading && (
+              <p className="text-xs opacity-40 px-3 py-2">Loading commissions...</p>
+            )}
+
+            {!commissionsQuery.isLoading && filteredCommissions.length === 0 && (
+              <div className="text-center py-6">
+                <Building2 className="w-10 h-10 opacity-20 mx-auto mb-2" />
+                <p className="opacity-40 text-sm">No commissions found</p>
+              </div>
+            )}
 
             {filteredLGAs.length === 0 && (
               <div className="text-center py-8">

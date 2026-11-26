@@ -9,7 +9,7 @@ const parsePDF = async (buffer: Buffer) => {
 export interface ParsedStaffData {
   name: string;
   sex: string;
-  status: string;
+  department: string;
   rank: string;
   sgl: number;
   dateOfBirth: string | null;
@@ -19,7 +19,6 @@ export interface ParsedStaffData {
   qualification: string;
   lgaOfOrigin: string;
   phoneNumber: string;
-  recommendedRetirementDate: string | null;
   remark?: string;
 }
 
@@ -37,7 +36,7 @@ export async function parseExcelFile(
     .map((row: any) => ({
       name: row.__EMPTY_1 || row.Name || row.name || "",
       sex: row.__EMPTY_2 || row.Sex || row.sex || "M",
-      status: row.__EMPTY_3 || row.Status || row.status || "",
+      department: row.__EMPTY_3 || row.Department || row.department || "",
       rank: row.__EMPTY_4 || row.Rank || row.rank || row.role || "",
       sgl: parseInt(row.__EMPTY_5 || row.SGL || row.sgl || "0"),
       dateOfBirth:
@@ -74,12 +73,6 @@ export async function parseExcelFile(
         row.phoneNumber ||
         ""
       ).toString(),
-      recommendedRetirementDate:
-        formatDate(
-          row.__EMPTY_13 ||
-            row["Recommended Retirement Date"] ||
-            row.recommendedRetirementDate
-        ) || "",
       remark: row.__EMPTY_14 || row.Remark || row.remark || "",
     }));
 }
@@ -100,7 +93,7 @@ export async function parsePDFFile(
       staffData.push({
         name: extractValue(line, "Name:"),
         sex: "M",
-        status: "",
+        department: "",
         rank: "",
         sgl: 0,
         dateOfBirth: "",
@@ -110,7 +103,6 @@ export async function parsePDFFile(
         qualification: "",
         lgaOfOrigin: lgaId,
         phoneNumber: "",
-        recommendedRetirementDate: "",
       });
     }
   }
@@ -171,7 +163,7 @@ function extractValue(line: string, key: string): string {
 export interface BulkUpdateRow {
   name: string;
   sex?: string;
-  status?: string;
+  department?: string;
   rank?: string;
   sgl?: number;
   phoneNumber?: string;
@@ -204,7 +196,7 @@ export async function parseBulkUpdateExcel(file: File): Promise<BulkUpdateRow[]>
       return {
         name: (get("name") || "").toString().trim(),
         sex: get("sex") ? get("sex").toString().trim().toUpperCase() : undefined,
-        status: get("status") ? get("status").toString().trim() : undefined,
+        department: get("department") ? get("department").toString().trim() : undefined,
         rank: get("rank") ? get("rank").toString().trim() : undefined,
         sgl: get("sgl") ? parseInt(get("sgl").toString()) : undefined,
         phoneNumber: get("phone number", "phone", "phonenumber", "phone_no")

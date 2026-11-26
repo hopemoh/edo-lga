@@ -1,23 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { statuses } from "@/lib/db/schema";
+import { departments } from "@/lib/db/schema";
 import { getTokenFromRequest, verifyToken, isAdminOrOfficeHolder } from "@/lib/auth";
-import { statusSchema } from "@/lib/validations";
+import { departmentSchema } from "@/lib/validations";
 import { logError } from "@/lib/error-logger";
 
 export async function GET() {
   try {
-    const allStatuses = await db.select().from(statuses);
-    return NextResponse.json(allStatuses);
+    const allDepartments = await db.select().from(departments);
+    return NextResponse.json(allDepartments);
   } catch (error) {
     await logError({
-      source: "api/status",
+      source: "api/departments",
       message: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : undefined,
     });
     return NextResponse.json(
-      { error: "Couldn't load statuses. Please try again." },
+      { error: "Couldn't load departments. Please try again." },
       { status: 500 }
     );
   }
@@ -36,35 +36,35 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const parsed = statusSchema.safeParse(body);
+    const parsed = departmentSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
     }
     const { name } = parsed.data;
 
-    const existing = await db.query.statuses.findFirst({
-      where: eq(statuses.name, name),
+    const existing = await db.query.departments.findFirst({
+      where: eq(departments.name, name),
     });
 
     if (existing) {
       return NextResponse.json(
-        { error: "Status already exists" },
+        { error: "Department already exists" },
         { status: 409 }
       );
     }
 
     const id = crypto.randomUUID();
-    const [newStatus] = await db
-      .insert(statuses)
+    const [newDepartment] = await db
+      .insert(departments)
       .values({ id, name })
       .returning();
 
-    return NextResponse.json(newStatus, { status: 201 });
+    return NextResponse.json(newDepartment, { status: 201 });
   } catch (error) {
     const token = getTokenFromRequest(request);
     const user = token ? verifyToken(token) : null;
     await logError({
-      source: "api/status",
+      source: "api/departments",
       message: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : undefined,
       request,
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
       userRole: user?.role,
     });
     return NextResponse.json(
-      { error: "Couldn't save the status. Please try again." },
+      { error: "Couldn't save the department. Please try again." },
       { status: 500 }
     );
   }

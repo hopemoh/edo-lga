@@ -28,16 +28,16 @@ async function seed() {
   const admin = adminUsers[0];
   console.log(`  Found admin: ${admin.name} (${admin.id})`);
 
-  // Step 2: Find existing statuses and LGAs
-  console.log("\nStep 2: Finding existing statuses and LGAs...");
-  const statuses = await sql`SELECT id FROM statuses LIMIT 1`;
-  if (statuses.length === 0) {
-    console.error("No statuses found! Run seed.ts first.");
+  // Step 2: Find existing departments and LGAs
+  console.log("\nStep 2: Finding existing departments and LGAs...");
+  const departments = await sql`SELECT id FROM departments LIMIT 1`;
+  if (departments.length === 0) {
+    console.error("No departments found! Run seed.ts first.");
     process.exit(1);
   }
-  const statusId = statuses[0].id;
+  const departmentId = departments[0].id;
 
-  const lgas = await sql`SELECT id FROM lgas LIMIT 1`;
+  const lgas = await sql`SELECT id FROM lgas WHERE kind = 'LGA' LIMIT 1`;
   if (lgas.length === 0) {
     console.error("No LGAs found! Run seed.ts first.");
     process.exit(1);
@@ -55,8 +55,8 @@ async function seed() {
 
     // Create a minimal external staff record for the chairman
     await sql`
-      INSERT INTO staff (id, "lgaId", "serialNumber", name, sex, "statusId", role, sgl, "dateOfBirth", "dateOfFirstAppt", "phoneNumber", is_external)
-      VALUES (${chairmanStaffId}, ${lgaId}, ${nextSerial}, 'Chairman', 'Other', ${statusId}, 'STAFF', 0, '1970-01-01', '2000-01-01', '+CHAIRMAN-' || ${chairmanStaffId}, true)
+      INSERT INTO staff (id, "lgaId", "serialNumber", name, sex, "departmentId", role, sgl, "dateOfBirth", "dateOfFirstAppt", "phoneNumber", is_external)
+      VALUES (${chairmanStaffId}, ${lgaId}, ${nextSerial}, 'Chairman', 'Other', ${departmentId}, 'STAFF', 0, '1970-01-01', '2000-01-01', '+CHAIRMAN-' || ${chairmanStaffId}, true)
     `;
     console.log(`  Created external staff record for Chairman: ${chairmanStaffId}`);
 
@@ -99,8 +99,8 @@ async function seed() {
       const nextSerial = (maxSerialResult[0]?.max || 0) + 1;
 
       await sql`
-        INSERT INTO staff (id, "lgaId", "serialNumber", name, sex, "statusId", role, sgl, "dateOfBirth", "dateOfFirstAppt", "phoneNumber", is_external)
-        VALUES (${secretaryStaffId}, ${lgaId}, ${nextSerial}, 'Secretary', 'Other', ${statusId}, 'STAFF', 0, '1970-01-01', '2000-01-01', '+SECRETARY-' || ${secretaryStaffId}, true)
+        INSERT INTO staff (id, "lgaId", "serialNumber", name, sex, "departmentId", role, sgl, "dateOfBirth", "dateOfFirstAppt", "phoneNumber", is_external)
+        VALUES (${secretaryStaffId}, ${lgaId}, ${nextSerial}, 'Secretary', 'Other', ${departmentId}, 'STAFF', 0, '1970-01-01', '2000-01-01', '+SECRETARY-' || ${secretaryStaffId}, true)
       `;
       console.log(`  Created external staff record for Secretary: ${secretaryStaffId}`);
 
