@@ -70,8 +70,8 @@ export default function FileUploadModal({ open, onClose, onImport, lgaId }: File
         // Check if there are missing references
         if (result.missingReferences) {
           const missing = []
-          if (result.missingReferences.missingStatuses?.length > 0) {
-            missing.push(`Statuses: ${result.missingReferences.missingStatuses.join(', ')}`)
+          if (result.missingReferences.missingDepartments?.length > 0) {
+            missing.push(`Departments: ${result.missingReferences.missingDepartments.join(', ')}`)
           }
           if (result.missingReferences.missingRanks?.length > 0) {
             missing.push(`Ranks: ${result.missingReferences.missingRanks.join(', ')}`)

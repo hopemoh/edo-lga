@@ -186,7 +186,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const serialNumber = body.serialNumber;
+    // The staff form does not ask for a serial number. The database requires
+    // one, so derive the next value the same way the bulk import does.
+    let serialNumber = body.serialNumber;
+    if (serialNumber === undefined || serialNumber === null || serialNumber === "" || Number.isNaN(Number(serialNumber))) {
+      const [{ max }] = await db
+        .select({ max: sql<number>`coalesce(max(${staff.serialNumber}), 0)` })
+        .from(staff);
+      serialNumber = Number(max) + 1;
+    }
     const staffRole = body.role ?? "STAFF";
     const yearsExperience = body.yearsExperience;
     const rankId = body.rankId;
